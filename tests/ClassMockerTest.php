@@ -177,4 +177,14 @@ class ClassMockerTest extends \PHPUnit_Framework_TestCase
         $this->assertInstanceOf(BaseMock::class, $test);
     }
 
+
+    public function testFrameworkMock()
+    {
+        $framework = $this->getMockForAbstractClass(FrameworkInterface::class);
+        $framework->expects($this->once())->method('register');
+
+        $fwMocker = new ClassMocker();
+        $fwMocker->mockFramework($framework);
+    }
+
 }

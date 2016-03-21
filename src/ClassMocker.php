@@ -75,6 +75,20 @@ class ClassMocker
     }
 
     /**
+     * Register an entire framework mock
+     *
+     * @param FrameworkInterface $framework
+     *
+     * @return $this
+     */
+    public function mockFramework(FrameworkInterface $framework)
+    {
+        $framework->register($this);
+
+        return $this;
+    }
+
+    /**
      * Mock any class matching the given pattern
      *
      * e.g.
