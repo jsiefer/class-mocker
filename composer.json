@@ -1,0 +1,33 @@
+{
+    "name": "jsiefer/class-mocker",
+    "description": "Can mock entire frameworks or namespaces",
+    "license": "MIT",
+    "version": "0.2.1",
+    "keywords": ["testing", "unit test", "phpunit", "mocking"],
+    "authors": [
+        {
+            "name": "Jacob Siefer",
+            "email": "mail@jacobsiefer.de"
+        }
+    ],
+    "require": {
+        "php": ">=5.3.0",
+        "zendframework/zend-code": "^3.0",
+        "phpunit/phpunit": "~4.0"
+    },
+    "require-dev": {
+        "squizlabs/php_codesniffer": "^2.5",
+        "phpmd/phpmd": "^2.3",
+        "mikey179/vfsStream": "^1.6"
+    },
+    "autoload": {
+        "psr-4": {
+          "JSiefer\\ClassMocker\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "JSiefer\\ClassMocker\\TestClasses\\": "tests/_data/test_classes"
+        }
+    }
+}
