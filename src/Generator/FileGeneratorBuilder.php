@@ -107,7 +107,12 @@ class FileGeneratorBuilder
     public function build($className)
     {
         $footprint = $this->_footprintRegistry->get($className);
-        $parentClass = $this->_baseClassRegistry->find($className);
+
+        $parentClass = $footprint->getParent();
+        if (!$parentClass) {
+            $parentClass = $this->_baseClassRegistry->find($className);
+        }
+
 
         if ($footprint->isInterface()) {
             $generator = new InterfaceGenerator();

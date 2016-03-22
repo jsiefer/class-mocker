@@ -17,6 +17,9 @@ use JSiefer\ClassMocker\TestClasses\TraitA;
 use JSiefer\ClassMocker\TestClasses\TraitB;
 use JSiefer\ClassMocker\TestClasses\TraitC;
 use JSiefer\ClassMocker\TestFramework\Data\ObjectA;
+use JSiefer\ClassMocker\TestFramework\Data\ObjectB;
+use JSiefer\ClassMocker\TestFramework\InterfaceA;
+use JSiefer\ClassMocker\TestFramework\InterfaceB;
 use org\bovigo\vfs\vfsStream;
 
 /**
@@ -170,10 +173,14 @@ class ClassMockerTest extends \PHPUnit_Framework_TestCase
         $fwMocker->mock('JSiefer\ClassMocker\TestFramework\*');
         $fwMocker->enable();
 
-        $test = new ObjectA();
+        $test = new ObjectB();
 
         $this->assertEquals('foobar', ObjectA::EVENT);
         $this->assertEquals(100, ObjectA::SORT);
+
+        $this->assertInstanceOf(ObjectA::class, $test);
+        $this->assertInstanceOf(ObjectB::class, $test);
+        $this->assertInstanceOf(InterfaceB::class, $test);
         $this->assertInstanceOf(BaseMock::class, $test);
     }
 
