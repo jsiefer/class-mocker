@@ -17,7 +17,7 @@
         <testsuite name="Unit Tests">
             <directory suffix="Test.php">./</directory>
             <exclude>var</exclude>
-            <exclude>dummies</exclude>
+            <exclude>_data</exclude>
         </testsuite>
     </testsuites>
     <filter>
