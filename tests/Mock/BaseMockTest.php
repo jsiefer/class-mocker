@@ -104,4 +104,18 @@ class BaseMockTest extends \PHPUnit_Framework_TestCase
 
         $this->assertEquals('Foobar', $dummy->myName);
     }
+
+    /**
+     * Allow call to protected methods by using the 'PROTECTED_' prefix
+     * 
+     * @return void
+     * @test
+     */
+    public function testProtectedMethodCall()
+    {
+        $dummy = new DummyClass();
+
+        $this->assertNull($dummy->secret(10));
+        $this->assertEquals(20, $dummy->PROTECTED_secret(10));
+    }
 }

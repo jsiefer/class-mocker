@@ -88,6 +88,14 @@ abstract class BaseMock extends PHPUnitObject
             return $result;
         }
 
+        // allow call to protected methods
+        if (strpos($name, 'PROTECTED_') === 0) {
+            $method = substr($name, 10);
+            if (method_exists($this, $method)) {
+                return call_user_func_array([$this, $method], $arguments);
+            }
+        }
+
         return parent::__call($name, $arguments);
     }
 

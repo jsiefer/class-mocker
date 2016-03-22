@@ -12,4 +12,14 @@ use JSiefer\ClassMocker\Mock\BaseMock;
  */
 class DummyClass extends BaseMock
 {
+    /**
+     * Simple protected method
+     *
+     * @param $a
+     * @return mixed
+     */
+    protected function secret($a)
+    {
+        return $a + 10;
+    }
 }
