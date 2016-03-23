@@ -27,7 +27,7 @@ class BaseMockTest extends \PHPUnit_Framework_TestCase
     public function testMethodCallAssertion()
     {
         $dummy = new DummyClass();
-        $dummy->expects($this->once())->method('bark')->willReturn(100);
+        $dummy->expects($this->once())->method('bark')->will($this->returnValue(100));
 
         $this->assertEquals(100, $dummy->bark());
         $this->assertNull($dummy->someMethod(1));
@@ -39,7 +39,7 @@ class BaseMockTest extends \PHPUnit_Framework_TestCase
     public function testMethodShorthand()
     {
         $dummy = new DummyClass();
-        $dummy->method('bark')->willReturn(100);
+        $dummy->method('bark')->will($this->returnValue(100));
 
         $this->assertEquals(100, $dummy->bark());
     }
@@ -52,7 +52,7 @@ class BaseMockTest extends \PHPUnit_Framework_TestCase
     public function testProxyMode()
     {
         $original = $this->getMock('DummyClassOriginal', ['test']);
-        $original->expects($this->once())->method('test')->willReturn(100);
+        $original->expects($this->once())->method('test')->will($this->returnValue(100));
 
         $dummy = new DummyClass();
         $dummy->__phpunit_setOriginalObject($original);
@@ -107,7 +107,7 @@ class BaseMockTest extends \PHPUnit_Framework_TestCase
 
     /**
      * Allow call to protected methods by using the 'PROTECTED_' prefix
-     * 
+     *
      * @return void
      * @test
      */

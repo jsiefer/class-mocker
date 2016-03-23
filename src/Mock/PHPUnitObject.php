@@ -160,4 +160,24 @@ abstract class PHPUnitObject implements PHPUnitObjectInterface
         $this->__phpunit_getInvocationMocker()->verify();
         $this->__phpunit_invocationMocker = null;
     }
+
+    /**
+     * Registers a new static expectation in the mock object and returns the
+     * match object which can be infused with further details.
+     *
+     * @param  \PHPUnit_Framework_MockObject_Matcher_Invocation $matcher
+     * @return \PHPUnit_Framework_MockObject_Builder_InvocationMocker
+     */
+    public static function staticExpects(\PHPUnit_Framework_MockObject_Matcher_Invocation $matcher)
+    {
+        throw new \BadMethodCallException("Method only implemented for backward compatibility");
+    }
+
+    /**
+     * @return \PHPUnit_Framework_MockObject_InvocationMocker
+     */
+    public static function __phpunit_getStaticInvocationMocker()
+    {
+        throw new \BadMethodCallException("Method only implemented for backward compatibility");
+    }
 }

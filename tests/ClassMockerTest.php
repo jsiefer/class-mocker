@@ -159,7 +159,7 @@ class ClassMockerTest extends \PHPUnit_Framework_TestCase
         $fwMocker->enable();
 
         $test = new \Expect_Something();
-        $test->expects($this->once())->method('hello')->willReturn('Hello World');
+        $test->expects($this->once())->method('hello')->will($this->returnValue('Hello World'));
         $this->assertEquals('Hello World', $test->hello());
 
         $fwMocker->disable();
