@@ -9,9 +9,9 @@
  */
 namespace JSiefer\ClassMocker\Mock;
 
+use JSiefer\ClassMocker\next;
 use JSiefer\ClassMocker\TestListener;
 use PHPUnit_Framework_MockObject_Invocation_Object as InvocationObject;
-use PHPUnit_Framework_MockObject_InvocationMocker as InvocationMocker;
 use PHPUnit_Framework_MockObject_MockObject as PHPUnitObjectInterface;
 
 /**
@@ -75,15 +75,18 @@ abstract class PHPUnitObject implements PHPUnitObjectInterface
      */
     public function __call($name, $arguments)
     {
-        $result = $this->__phpunit_getInvocationMocker()->invoke(
-            new InvocationObject(get_class($this), $name, $arguments, $this, FALSE)
-        );
+        $mocker = $this->__phpunit_getInvocationMocker();
+        $invocation = new InvocationObject(get_class($this), $name, $arguments, $this, FALSE);
 
+        $result = $mocker->invoke($invocation);
+
+        // check for proxy method
         if ($this->__phpunit_originalObject) {
             if (method_exists($this->__phpunit_originalObject, $name)) {
                 return call_user_func_array(array($this->__phpunit_originalObject, $name), $arguments);
             }
         }
+
         return $result;
     }
 
@@ -130,7 +133,7 @@ abstract class PHPUnitObject implements PHPUnitObjectInterface
     public function __phpunit_getInvocationMocker()
     {
         if ($this->__phpunit_invocationMocker === null) {
-            $this->__phpunit_invocationMocker = new InvocationMocker;
+            $this->__phpunit_invocationMocker = new InvocationMocker();
             if (self::$__classMock_activeListener) {
                 self::$__classMock_activeListener->registerMock($this);
             }
@@ -167,6 +170,7 @@ abstract class PHPUnitObject implements PHPUnitObjectInterface
      *
      * @param  \PHPUnit_Framework_MockObject_Matcher_Invocation $matcher
      * @return \PHPUnit_Framework_MockObject_Builder_InvocationMocker
+     * @codeCoverageIgnore
      */
     public static function staticExpects(\PHPUnit_Framework_MockObject_Matcher_Invocation $matcher)
     {
@@ -175,6 +179,7 @@ abstract class PHPUnitObject implements PHPUnitObjectInterface
 
     /**
      * @return \PHPUnit_Framework_MockObject_InvocationMocker
+     * @codeCoverageIgnore
      */
     public static function __phpunit_getStaticInvocationMocker()
     {

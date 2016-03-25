@@ -236,8 +236,11 @@ class ClassMocker
 
         $dir = dirname($path);
 
-        if (!is_dir($dir) && !mkdir($dir, 0777, true)) {
-            throw new \Exception("Failed to create class generation folder");
+        if (!is_dir($dir) && !@mkdir($dir, 0777, true)) {
+            $e = error_get_last();
+            throw new \RuntimeException(
+                "Failed to create class generation folder: " . $e['message']
+            );
         }
 
         return $path;

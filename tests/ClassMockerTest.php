@@ -28,6 +28,16 @@ use org\bovigo\vfs\vfsStream;
 class ClassMockerTest extends \PHPUnit_Framework_TestCase
 {
     /**
+     * Set up
+     *
+     * @return void
+     */
+    public function setUp()
+    {
+        BaseMock::setDefaultCallBehavior(BaseMock::DEFAULT_BEHAVIOUR_RETURN_NULL);
+    }
+
+    /**
      * @test
      */
     public function testAutoload()
@@ -61,6 +71,27 @@ class ClassMockerTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
+     * Check and validate generation folder
+     *
+     * @test
+     * @expectedException \RuntimeException
+     * @expectedExceptionMessage Failed to create class generation folder
+     */
+    public function shouldFailOnInvalidGenerationDir()
+    {
+        $vfs = vfsStream::setup('generation');
+
+        $dir = $vfs->url('generation');
+
+        file_put_contents($dir.'/test', 'foobar');
+
+        $fwMocker = new ClassMocker;
+        $fwMocker->setGenerationDir($dir.'/test');
+        $fwMocker->mock('ShouldFailOnInvalidGenerationDirTestClass');
+        $fwMocker->autoload('ShouldFailOnInvalidGenerationDirTestClass');
+    }
+
+    /**
      * @test
      * @expectedException \RuntimeException
      * @depends testAutoload
@@ -80,6 +111,7 @@ class ClassMockerTest extends \PHPUnit_Framework_TestCase
     public function testTraitInclusion()
     {
         $fwMocker = new ClassMocker;
+        //$fwMocker->setGenerationDir('./var/generation');
         $fwMocker->mock('Foobar*');
         $fwMocker->mock('Demo\*Collection');
         $fwMocker->registerTrait(TraitA::class);
@@ -94,23 +126,33 @@ class ClassMockerTest extends \PHPUnit_Framework_TestCase
         $fwMocker->enable();
 
         $instance = new \Foobar_MyTrait();
-
-        // check that all trait:__init methods are called.
-        $this->assertEquals('HelloWorld!!!', $instance->output);
-
-        // check common predefined trait usage
-       // $instance->setFoo('bar');
-        //$this->assertEquals('bar', $instance->getData('foo'));
-        //$this->assertEquals('bar', $instance->getFoo());
-
-
         $this->assertInstanceOf('Foobar_MyTrait', $instance);
+
+        /**
+         * Check that all trait:___init methods are called.
+         *
+         * @see \JSiefer\ClassMocker\TestClasses\TraitA::___init()
+         * @see \JSiefer\ClassMocker\TestClasses\TraitB::___init()
+         * @see \JSiefer\ClassMocker\TestClasses\TraitC::___init()
+         */
+        $this->assertEquals('Hello World!!!', $instance->output);
+        $this->assertTrue($instance->getFoobar());
+        $this->assertEquals('test', $instance->foobar);
+
+
         $this->assertEquals('TraitC:talk', $instance->talk());
         $this->assertEquals('TraitC:listen', $instance->listen());
         $this->assertEquals('TraitC:jump', $instance->jump());
         $this->assertEquals('TraitB:show', $instance->show());
         $this->assertEquals('TraitB:hide', $instance->hide());
         $this->assertEquals('TraitA:read', $instance->read());
+
+        /**
+         * Make sure method-stubs will always overwrite any
+         * trait implementation
+         */
+        $instance->method('jump')->willReturn('I JUMPED');
+        $this->assertEquals('I JUMPED', $instance->jump());
 
         // test different orders
         $collection = new \Demo\TestCollection();

@@ -3,6 +3,7 @@
 namespace JSiefer\ClassMocker\TestClasses;
 
 use JSiefer\ClassMocker\Mock\BaseMock;
+use JSiefer\ClassMocker\next;
 
 
 /**
@@ -18,8 +19,34 @@ class DummyClass extends BaseMock
      * @param $a
      * @return mixed
      */
-    protected function secret($a)
+    protected function protectedMethod($a)
+    {
+        if ($a === 0) {
+            return next::caller();
+        }
+        return $a + 10;
+    }
+
+    /**
+     * Simple protected method
+     *
+     * @param $a
+     * @return mixed
+     */
+    private function privateMethod($a)
     {
         return $a + 10;
     }
+
+    /**
+     * Simple protected method
+     *
+     * @param $a
+     * @return mixed
+     */
+    public function publicMethod($a)
+    {
+        return $a + 10;
+    }
+
 }

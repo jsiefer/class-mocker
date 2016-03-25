@@ -9,7 +9,10 @@
  */
 namespace JSiefer\ClassMocker\Generator;
 
+use JSiefer\ClassMocker\Mock\BaseMock;
 use Zend\Code\Generator\ClassGenerator as ZendClassGenerator;
+use Zend\Code\Generator\DocBlockGenerator;
+use Zend\Code\Generator\MethodGenerator;
 use Zend\Code\Generator\PropertyGenerator;
 
 
@@ -18,6 +21,8 @@ use Zend\Code\Generator\PropertyGenerator;
  */
 class ClassGenerator extends ZendClassGenerator
 {
+    const METHOD_TEMPLATE = 'return $this->__call("%s", func_get_args());';
+
     /**
      * @var int
      */
@@ -31,19 +36,42 @@ class ClassGenerator extends ZendClassGenerator
     /**
      * @var string[][]
      */
-    protected $_magicMethods = [];
+    protected $_traitMethodsAliases = [];
 
     /**
      * @return string
      */
     public function generate()
     {
-        if (!empty($this->_magicMethods)) {
+        if (!empty($this->_traitMethodsAliases)) {
             $this->addProperty(
-                '__magicMethodRegistry',
-                $this->_magicMethods,
+                '___classMocker_traitMethods',
+                $this->_traitMethodsAliases,
                 PropertyGenerator::FLAG_PROTECTED | PropertyGenerator::FLAG_STATIC
             );
+
+            foreach (array_keys($this->_traitMethodsAliases) as $methodName) {
+
+                switch($methodName) {
+                    case BaseMock::CALL:
+                    case BaseMock::CONSTRUCTOR:
+                    case BaseMock::GETTER:
+                    case BaseMock::SETTER:
+                    case BaseMock::INIT:
+                        continue 2;
+                }
+
+                $docBlock = new DocBlockGenerator();
+                $docBlock->setShortDescription("Delicate $methodName() to __call() method ");
+
+                $method = new MethodGenerator();
+                $method->setName($methodName);
+                $method->setDocBlock($docBlock);
+                $method->setBody(sprintf(self::METHOD_TEMPLATE, $methodName));
+
+                $this->addMethodFromGenerator($method);
+            }
+
         }
         return parent::generate();
     }
@@ -91,18 +119,7 @@ class ClassGenerator extends ZendClassGenerator
         $this->addTrait($alias);
 
         foreach ($trait->getMethods() as $method) {
-
-            switch($method->getName()) {
-                case '__init':
-                case '__call':
-                case '__get':
-                case '__set':
-                    $this->registerMagicMethod($alias, $method->getName());
-                    break;
-                default:
-                    $this->addTraitMethod($alias, $method->getName());
-                    break;
-            }
+            $this->registerTraitMethod($alias, $method->getName());
         }
 
         return $this;
@@ -116,16 +133,16 @@ class ClassGenerator extends ZendClassGenerator
      *
      * @return void
      */
-    protected function registerMagicMethod($trait, $method)
+    protected function registerTraitMethod($trait, $method)
     {
         $alias = '__' . lcfirst($trait) . ucfirst(trim($method, '_'));
         $this->addTraitAlias($trait . '::' . $method, $alias);
         $this->addTraitMethod($trait, $method);
 
-        if (!isset($this->_magicMethods[$method])) {
-            $this->_magicMethods[$method] = [];
+        if (!isset($this->_traitMethodsAliases[$method])) {
+            $this->_traitMethodsAliases[$method] = [];
         }
-        $this->_magicMethods[$method][] = $alias;
+        $this->_traitMethodsAliases[$method][] = $alias;
     }
 
     /**

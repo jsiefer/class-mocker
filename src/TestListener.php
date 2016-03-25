@@ -51,14 +51,24 @@ class TestListener implements \PHPUnit_Framework_TestListener
      *
      * @param PHPUnit_Framework_Test $test
      * @param float $time
+     *
+     * @throws \Exception
      */
     public function endTest(PHPUnit_Framework_Test $test, $time)
     {
-        foreach ($this->_mocks as $mock) {
-            if ($mock->__phpunit_hasMatchers() && $test instanceof \PHPUnit_Framework_TestCase) {
-                $test->addToAssertionCount(1);
+        try {
+            foreach ($this->_mocks as $mock) {
+                if ($mock->__phpunit_hasMatchers() && $test instanceof \PHPUnit_Framework_TestCase) {
+                    $test->addToAssertionCount(1);
+                }
+                $mock->__phpunit_verify();
             }
-            $mock->__phpunit_verify();
+        }
+        catch(\Exception $e) {
+            BaseMock::__classMock_unregisterListener();
+            $this->_mocks = [];
+
+            throw $e;
         }
 
         BaseMock::__classMock_unregisterListener();
@@ -71,6 +81,8 @@ class TestListener implements \PHPUnit_Framework_TestListener
      * @param  PHPUnit_Framework_Test $test
      * @param  Exception $e
      * @param  float $time
+     *
+     * @codeCoverageIgnore
      */
     public function addError(PHPUnit_Framework_Test $test, Exception $e, $time)
     {}
@@ -81,6 +93,8 @@ class TestListener implements \PHPUnit_Framework_TestListener
      * @param  PHPUnit_Framework_Test $test
      * @param  PHPUnit_Framework_AssertionFailedError $e
      * @param  float $time
+     *
+     * @codeCoverageIgnore
      */
     public function addFailure(PHPUnit_Framework_Test $test, PHPUnit_Framework_AssertionFailedError $e, $time)
     {}
@@ -91,6 +105,8 @@ class TestListener implements \PHPUnit_Framework_TestListener
      * @param  PHPUnit_Framework_Test $test
      * @param  Exception $e
      * @param  float $time
+     *
+     * @codeCoverageIgnore
      */
     public function addIncompleteTest(PHPUnit_Framework_Test $test, Exception $e, $time)
     {}
@@ -103,6 +119,7 @@ class TestListener implements \PHPUnit_Framework_TestListener
      * @param  float $time
      *
      * @since  Method available since Release 3.0.0
+     * @codeCoverageIgnore
      */
     public function addSkippedTest(PHPUnit_Framework_Test $test, Exception $e, $time)
     {}
@@ -113,6 +130,7 @@ class TestListener implements \PHPUnit_Framework_TestListener
      * @param  PHPUnit_Framework_TestSuite $suite
      *
      * @since  Method available since Release 2.2.0
+     * @codeCoverageIgnore
      */
     public function startTestSuite(PHPUnit_Framework_TestSuite $suite)
     {}
@@ -123,6 +141,7 @@ class TestListener implements \PHPUnit_Framework_TestListener
      * @param  PHPUnit_Framework_TestSuite $suite
      *
      * @since  Method available since Release 2.2.0
+     * @codeCoverageIgnore
      */
     public function endTestSuite(PHPUnit_Framework_TestSuite $suite)
     {}
@@ -135,6 +154,7 @@ class TestListener implements \PHPUnit_Framework_TestListener
      * @param float $time
      *
      * @since  Method available since Release 4.0.0
+     * @codeCoverageIgnore
      */
     public function addRiskyTest(PHPUnit_Framework_Test $test, Exception $e, $time)
     {}
