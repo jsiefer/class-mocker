@@ -47,9 +47,14 @@ trait TraitA
     }
 
     /**
+     * @param $what
+     * @param int $volume
+     *
+     * @param Human $target
+     *
      * @return string
      */
-    public function talk()
+    public function talk($what, $volume = 100, Human &$target = null)
     {
         return 'TraitA:talk';
     }
@@ -71,9 +76,13 @@ trait TraitA
     }
 
     /**
+     * @param string $book
+     * @param int $page
+     * @param array $lines
+     *
      * @return string
      */
-    public function read()
+    public function read($book = '', $page = 0, array $lines = [])
     {
         return 'TraitA:read';
     }

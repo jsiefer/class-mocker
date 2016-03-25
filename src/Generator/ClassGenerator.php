@@ -13,7 +13,9 @@ use JSiefer\ClassMocker\Mock\BaseMock;
 use Zend\Code\Generator\ClassGenerator as ZendClassGenerator;
 use Zend\Code\Generator\DocBlockGenerator;
 use Zend\Code\Generator\MethodGenerator;
+use Zend\Code\Generator\ParameterGenerator;
 use Zend\Code\Generator\PropertyGenerator;
+use Zend\Code\Reflection\DocBlockReflection;
 
 
 /**
@@ -39,6 +41,11 @@ class ClassGenerator extends ZendClassGenerator
     protected $_traitMethodsAliases = [];
 
     /**
+     * @var \ReflectionMethod[]
+     */
+    protected $_method = [];
+
+    /**
      * @return string
      */
     public function generate()
@@ -52,7 +59,7 @@ class ClassGenerator extends ZendClassGenerator
 
             foreach (array_keys($this->_traitMethodsAliases) as $methodName) {
 
-                switch($methodName) {
+                switch ($methodName) {
                     case BaseMock::CALL:
                     case BaseMock::CONSTRUCTOR:
                     case BaseMock::GETTER:
@@ -60,21 +67,55 @@ class ClassGenerator extends ZendClassGenerator
                     case BaseMock::INIT:
                         continue 2;
                 }
-
-                $docBlock = new DocBlockGenerator();
-                $docBlock->setShortDescription("Delicate $methodName() to __call() method ");
-
-                $method = new MethodGenerator();
-                $method->setName($methodName);
-                $method->setDocBlock($docBlock);
-                $method->setBody(sprintf(self::METHOD_TEMPLATE, $methodName));
-
-                $this->addMethodFromGenerator($method);
+                $this->generateMethod($methodName);
             }
-
         }
         return parent::generate();
     }
+
+    /**
+     * Generate method
+     *
+     * @param string $methodName
+     * @return void
+     */
+    protected function generateMethod($methodName)
+    {
+        $methodReflection = $this->_method[$methodName];
+        $docBlockReflection = new DocBlockReflection($methodReflection);
+
+        $docBlock = new DocBlockGenerator();
+        $docBlock->fromReflection($docBlockReflection);
+        $docBlock->setShortDescription("Delicate $methodName() to __call() method ");
+
+        $method = new MethodGenerator();
+        $method->setName($methodName);
+        $method->setDocBlock($docBlock);
+        $method->setBody(sprintf(self::METHOD_TEMPLATE, $methodName));
+
+        foreach ($methodReflection->getParameters() as $parameter) {
+
+            $parameterGenerator = new ParameterGenerator();
+            $parameterGenerator->setPosition($parameter->getPosition());
+            $parameterGenerator->setName($parameter->getName());
+            $parameterGenerator->setPassedByReference($parameter->isPassedByReference());
+
+            if ($parameter->isDefaultValueAvailable()) {
+                $parameterGenerator->setDefaultValue($parameter->getDefaultValue());
+            }
+            if ($parameter->isArray()) {
+                $parameterGenerator->setType('array');
+            }
+            if ($typeClass = $parameter->getClass()) {
+                $parameterGenerator->setType($typeClass->getName());
+            }
+
+            $method->setParameter($parameterGenerator);
+        }
+        $this->addMethodFromGenerator($method);
+    }
+
+
 
     /**
      * @param string $extendedClass
@@ -119,6 +160,7 @@ class ClassGenerator extends ZendClassGenerator
         $this->addTrait($alias);
 
         foreach ($trait->getMethods() as $method) {
+            $this->_method[$method->getName()] = $method;
             $this->registerTraitMethod($alias, $method->getName());
         }
 

@@ -75,6 +75,19 @@ class FootprintRegistry
         $this->_data += $json;
     }
 
+    /**
+     * Add footprint
+     *
+     * @param string $className
+     * @param ClassFootprint $footprint
+     *
+     * @return $this
+     */
+    public function addFootprint($className, ClassFootprint $footprint)
+    {
+        $this->_footprints[$className] = $footprint;
+        return $this;
+    }
 
     /**
      * Retrieve class footprint
@@ -97,8 +110,7 @@ class FootprintRegistry
                 $footprint->setType(ClassFootprint::TYPE_INTERFACE);
             }
         }
-
-        $this->_footprints[$className] = $footprint;
+        $this->addFootprint($className, $footprint);
 
         return $footprint;
     }

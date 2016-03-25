@@ -10,6 +10,7 @@
 namespace JSiefer\ClassMocker;
 
 
+use JSiefer\ClassMocker\Footprint\ClassFootprint;
 use JSiefer\ClassMocker\Generator\FileGenerator;
 use JSiefer\ClassMocker\Generator\FileGeneratorBuilder;
 use JSiefer\ClassMocker\Reflection\ClassReflection;
@@ -119,6 +120,20 @@ class ClassMocker
     public function importFootprints($file)
     {
         $this->_builder->importFootprints($file);
+        return $this;
+    }
+
+    /**
+     * Register class footprint
+     *
+     * @param $className
+     * @param ClassFootprint $footprint
+     *
+     * @return $this
+     */
+    public function registerFootprint($className, ClassFootprint $footprint)
+    {
+        $this->_builder->registerFootprint($className, $footprint);
         return $this;
     }
 

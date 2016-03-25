@@ -9,8 +9,11 @@
  */
 namespace JSiefer\ClassMocker;
 
+use JSiefer\ClassMocker\Footprint\ClassFootprint;
 use JSiefer\ClassMocker\Mock\BaseMock;
 use JSiefer\ClassMocker\TestClasses\DummyTrait;
+use JSiefer\ClassMocker\TestClasses\Readable;
+use JSiefer\ClassMocker\TestClasses\Talkable;
 use JSiefer\ClassMocker\TestClasses\TestClass;
 use JSiefer\ClassMocker\TestClasses\TestMock;
 use JSiefer\ClassMocker\TestClasses\TraitA;
@@ -125,6 +128,12 @@ class ClassMockerTest extends \PHPUnit_Framework_TestCase
         $fwMocker->registerTrait(DummyTrait::class, 'Demo\*Collection');
         $fwMocker->enable();
 
+
+        $footprint = new ClassFootprint();
+        $footprint->addInterface(Readable::class);
+        $footprint->addInterface(Talkable::class);
+        $fwMocker->registerFootprint('Foobar_MyTrait', $footprint);
+
         $instance = new \Foobar_MyTrait();
         $this->assertInstanceOf('Foobar_MyTrait', $instance);
 
@@ -140,7 +149,7 @@ class ClassMockerTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals('test', $instance->foobar);
 
 
-        $this->assertEquals('TraitC:talk', $instance->talk());
+        $this->assertEquals('TraitC:talk', $instance->talk('test'));
         $this->assertEquals('TraitC:listen', $instance->listen());
         $this->assertEquals('TraitC:jump', $instance->jump());
         $this->assertEquals('TraitB:show', $instance->show());
@@ -156,7 +165,7 @@ class ClassMockerTest extends \PHPUnit_Framework_TestCase
 
         // test different orders
         $collection = new \Demo\TestCollection();
-        $this->assertEquals('TraitA:talk', $collection->talk());
+        $this->assertEquals('TraitA:talk', $collection->talk('test'));
         $this->assertEquals('TraitA:show', $collection->show());
 
         $fwMocker->disable();
