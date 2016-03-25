@@ -32,9 +32,6 @@ trait TraitB
         return 'TraitB:hide';
     }
 
-    /**
-     * @return string
-     */
     public function show()
     {
         return 'TraitB:show';

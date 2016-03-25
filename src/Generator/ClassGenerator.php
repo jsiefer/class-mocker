@@ -82,11 +82,14 @@ class ClassGenerator extends ZendClassGenerator
     protected function generateMethod($methodName)
     {
         $methodReflection = $this->_method[$methodName];
-        $docBlockReflection = new DocBlockReflection($methodReflection);
 
         $docBlock = new DocBlockGenerator();
-        $docBlock->fromReflection($docBlockReflection);
         $docBlock->setShortDescription("Delicate $methodName() to __call() method ");
+
+        if ($methodReflection->getDocComment()) {
+            $docBlockReflection = new DocBlockReflection($methodReflection);
+            $docBlock->fromReflection($docBlockReflection);
+        }
 
         $method = new MethodGenerator();
         $method->setName($methodName);
