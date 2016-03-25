@@ -126,16 +126,23 @@ class ClassMockerTest extends \PHPUnit_Framework_TestCase
         $fwMocker->registerTrait(TraitB::class, 'Demo\*Collection', 50);
         $fwMocker->registerTrait(TraitC::class, 'Demo\*Collection', 100);
         $fwMocker->registerTrait(DummyTrait::class, 'Demo\*Collection');
-        $fwMocker->enable();
-
+        $fwMocker->registerTrait(DummyTrait::class, 'Foobar_MyTrait2');
 
         $footprint = new ClassFootprint();
         $footprint->addInterface(Readable::class);
         $footprint->addInterface(Talkable::class);
         $fwMocker->registerFootprint('Foobar_MyTrait', $footprint);
 
-        $instance = new \Foobar_MyTrait();
+        $footprint = new ClassFootprint();
+        $footprint->setParent('Foobar_MyTrait');
+        $fwMocker->registerFootprint('Foobar_MyTrait2', $footprint);
+
+        $fwMocker->enable();
+
+
+        $instance = new \Foobar_MyTrait2();
         $this->assertInstanceOf('Foobar_MyTrait', $instance);
+        $this->assertInstanceOf('Foobar_MyTrait2', $instance);
 
         /**
          * Check that all trait:___init methods are called.

@@ -54,7 +54,7 @@ class ClassGenerator extends ZendClassGenerator
             $this->addProperty(
                 '___classMocker_traitMethods',
                 $this->_traitMethodsAliases,
-                PropertyGenerator::FLAG_PROTECTED | PropertyGenerator::FLAG_STATIC
+                PropertyGenerator::FLAG_PRIVATE | PropertyGenerator::FLAG_STATIC
             );
 
             foreach (array_keys($this->_traitMethodsAliases) as $methodName) {
@@ -158,13 +158,15 @@ class ClassGenerator extends ZendClassGenerator
     public function useTrait(\ReflectionClass $trait)
     {
         $alias = 'trait' . ($this->_traitsIdx++);
+        $alias .= '_' . str_replace('\\', '__', $trait->getName());
+
+        $alias = 'Trait_' . substr(md5($alias), 0, 10) . '_' .$trait->getShortName();
 
         $this->addUse($trait->getName(), $alias);
         $this->addTrait($alias);
 
         foreach ($trait->getMethods() as $method) {
-            $this->_method[$method->getName()] = $method;
-            $this->registerTraitMethod($alias, $method->getName());
+            $this->registerTraitMethod($alias, $method);
         }
 
         return $this;
@@ -174,20 +176,23 @@ class ClassGenerator extends ZendClassGenerator
      * Register magic method alias
      *
      * @param string $trait
-     * @param string $method
+     * @param \ReflectionMethod $method
      *
      * @return void
      */
-    protected function registerTraitMethod($trait, $method)
+    protected function registerTraitMethod($trait, \ReflectionMethod $method)
     {
-        $alias = '__' . lcfirst($trait) . ucfirst(trim($method, '_'));
-        $this->addTraitAlias($trait . '::' . $method, $alias);
-        $this->addTraitMethod($trait, $method);
+        $name = $method->getName();
+        $this->_method[$name] = $method;
 
-        if (!isset($this->_traitMethodsAliases[$method])) {
-            $this->_traitMethodsAliases[$method] = [];
+        $alias = '__' . lcfirst($trait) . ucfirst(trim($name, '_'));
+        $this->addTraitAlias($trait . '::' . $name, $alias);
+        $this->addTraitMethod($trait, $name);
+
+        if (!isset($this->_traitMethodsAliases[$name])) {
+            $this->_traitMethodsAliases[$name] = [];
         }
-        $this->_traitMethodsAliases[$method][] = $alias;
+        $this->_traitMethodsAliases[$name][] = $alias;
     }
 
     /**
