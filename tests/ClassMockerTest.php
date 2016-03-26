@@ -52,14 +52,18 @@ class ClassMockerTest extends \PHPUnit_Framework_TestCase
         $fwMocker->mock('SomeClass');
         $fwMocker->mock('Foobar_*');
         $fwMocker->mock('Bar_Foo_*Collection');
-        $fwMocker->mock('Testing\A\*Test');
+        $fwMocker->mock('Testing\A\*Test', true);
 
         // check auto loads
         $this->assertTrue($fwMocker->autoload('SomeClass'));
         $this->assertTrue($fwMocker->autoload('Foobar_HelloWorld'));
         $this->assertTrue($fwMocker->autoload('Bar_Foo_Model_TestCollection'));
-        $this->assertTrue($fwMocker->autoload('Testing\A\FoobarTest'));
 
+        // check optional autoloads
+        $this->assertFalse($fwMocker->autoload('Testing\A\FoobarTest'));
+        $this->assertTrue($fwMocker->autoloadOptional('Testing\A\FoobarTest'));
+
+        // should not get loaded
         $this->assertFalse($fwMocker->autoload('Bar_Foo_Model_Sample'));
         $this->assertFalse($fwMocker->autoload('SomeClass_Test'));
         $this->assertFalse($fwMocker->autoload('Testing\A\Foo'));
