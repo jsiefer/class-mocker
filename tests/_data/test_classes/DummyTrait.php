@@ -21,4 +21,37 @@ trait DummyTrait
     {
         return 'DummyTrait:talk';
     }
+
+    /**
+     * Simple protected method
+     *
+     * @param $a
+     * @return mixed
+     */
+    protected function protectedMethod($a)
+    {
+        return $a + 10;
+    }
+
+    /**
+     * Simple protected method
+     *
+     * @param $a
+     * @return mixed
+     */
+    private function privateMethod($a)
+    {
+        return $a + 10;
+    }
+
+    /**
+     * Simple protected method
+     *
+     * @param $a
+     * @return mixed
+     */
+    public function publicMethod($a)
+    {
+        return $a + 10;
+    }
 }

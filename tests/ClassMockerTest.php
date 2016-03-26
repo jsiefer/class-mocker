@@ -149,6 +149,9 @@ class ClassMockerTest extends \PHPUnit_Framework_TestCase
         $this->assertInstanceOf('Foobar_MyTrait', $instance);
         $this->assertInstanceOf('Foobar_MyTrait2', $instance);
 
+
+        $this->assertNull($instance->protectedMethod(10));
+
         /**
          * Check that all trait:___init methods are called.
          *

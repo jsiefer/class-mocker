@@ -111,13 +111,13 @@ class ClassGenerator extends ZendClassGenerator
         $method->setName($methodName);
         $method->setDocBlock($docBlock);
         $method->setBody(sprintf(self::METHOD_TEMPLATE, $methodName));
-        
+
         if ($methodReflection->isPublic()) {
-            $method->addFlag(MethodGenerator::VISIBILITY_PUBLIC);
+            $method->setVisibility(MethodGenerator::VISIBILITY_PUBLIC);
         } else if ($methodReflection->isProtected()) {
-            $method->addFlag(MethodGenerator::VISIBILITY_PROTECTED);
+            $method->setVisibility(MethodGenerator::VISIBILITY_PROTECTED);
         } else if ($methodReflection->isPrivate()) {
-            $method->addFlag(MethodGenerator::VISIBILITY_PRIVATE);
+            $method->setVisibility(MethodGenerator::VISIBILITY_PRIVATE);
         }
 
         foreach ($methodReflection->getParameters() as $parameter) {

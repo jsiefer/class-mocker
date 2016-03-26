@@ -59,8 +59,10 @@ abstract class BaseMock extends PHPUnitObject
      */
     public function __construct()
     {
+        $this->__enableClassScope = true;
         $this->__callTraitMethods(self::CONSTRUCTOR, func_get_args());
         $this->__callTraitMethods(self::INIT, func_get_args());
+        $this->__enableClassScope = false;
     }
 
     /**
@@ -161,6 +163,11 @@ abstract class BaseMock extends PHPUnitObject
         $traitMethods = $this->getTraitMethods();
 
         if (!isset($traitMethods[$name])) {
+            return $result;
+        }
+
+        $method = $this->__reflection()->getMethod($name);
+        if (!$method->isPublic() && !$this->__enableClassScope) {
             return $result;
         }
 
