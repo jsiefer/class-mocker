@@ -119,7 +119,7 @@ class ClassMockerTest extends \PHPUnit_Framework_TestCase
     public function testTraitInclusion()
     {
         $fwMocker = new ClassMocker;
-        //$fwMocker->setGenerationDir('./var/generation');
+        $fwMocker->setGenerationDir('./var/generation');
         $fwMocker->mock('Foobar*');
         $fwMocker->mock('Demo\*Collection');
         $fwMocker->registerTrait(TraitA::class);
@@ -151,6 +151,7 @@ class ClassMockerTest extends \PHPUnit_Framework_TestCase
 
 
         $this->assertNull($instance->protectedMethod(10));
+        $this->assertEquals(20, $instance->publicMethod(10));
 
         /**
          * Check that all trait:___init methods are called.

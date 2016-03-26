@@ -30,7 +30,7 @@ trait DummyTrait
      */
     protected function protectedMethod($a)
     {
-        return $a + 10;
+        return $this->privateMethod($a);
     }
 
     /**
@@ -52,6 +52,6 @@ trait DummyTrait
      */
     public function publicMethod($a)
     {
-        return $a + 10;
+        return $this->protectedMethod($a);
     }
 }

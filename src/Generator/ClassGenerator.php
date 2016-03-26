@@ -23,7 +23,7 @@ use Zend\Code\Reflection\DocBlockReflection;
  */
 class ClassGenerator extends ZendClassGenerator
 {
-    const METHOD_TEMPLATE = 'return $this->__call("%s", func_get_args());';
+    const METHOD_TEMPLATE = 'return $this->___classMocker_call("%s", func_get_args(), %s);';
 
     /**
      * @var int
@@ -110,7 +110,13 @@ class ClassGenerator extends ZendClassGenerator
         $method = new MethodGenerator();
         $method->setName($methodName);
         $method->setDocBlock($docBlock);
-        $method->setBody(sprintf(self::METHOD_TEMPLATE, $methodName));
+        $method->setBody(
+            sprintf(
+                self::METHOD_TEMPLATE,
+                $methodName,
+                $methodReflection->isPublic() ? 'false' : 'true'
+            )
+        );
 
         if ($methodReflection->isPublic()) {
             $method->setVisibility(MethodGenerator::VISIBILITY_PUBLIC);

@@ -98,6 +98,25 @@ abstract class BaseMock extends PHPUnitObject
     /**
      * @param $name
      * @param $arguments
+     * @param bool $internal
+     *
+     * @return BaseMock
+     */
+    protected function ___classMocker_call($name, $arguments, $internal = false)
+    {
+        if ($internal) {
+            $this->__enableClassScope = true;
+        }
+        $result = $this->__call($name, $arguments);
+        if ($internal) {
+            $this->__enableClassScope = false;
+        }
+        return $result;
+    }
+
+    /**
+     * @param $name
+     * @param $arguments
      *
      * @return $this
      */
