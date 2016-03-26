@@ -67,6 +67,22 @@ class ClassGenerator extends ZendClassGenerator
                     case BaseMock::INIT:
                         continue 2;
                 }
+
+                switch ('_' . $methodName) {
+                    case BaseMock::CALL:
+                    case BaseMock::CONSTRUCTOR:
+                    case BaseMock::GETTER:
+                    case BaseMock::SETTER:
+                        throw new \RuntimeException(
+                            sprintf(
+                                "Trait method %s::%s() is not valid, use %s() instead",
+                                $this->getName(),
+                                $methodName,
+                                '_' . $methodName
+                            )
+                        );
+                }
+
                 $this->generateMethod($methodName);
             }
         }

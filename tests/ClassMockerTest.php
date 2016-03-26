@@ -12,6 +12,7 @@ namespace JSiefer\ClassMocker;
 use JSiefer\ClassMocker\Footprint\ClassFootprint;
 use JSiefer\ClassMocker\Mock\BaseMock;
 use JSiefer\ClassMocker\TestClasses\DummyTrait;
+use JSiefer\ClassMocker\TestClasses\InvalidTrait;
 use JSiefer\ClassMocker\TestClasses\Readable;
 use JSiefer\ClassMocker\TestClasses\Talkable;
 use JSiefer\ClassMocker\TestClasses\TestClass;
@@ -176,6 +177,21 @@ class ClassMockerTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals('TraitA:show', $collection->show());
 
         $fwMocker->disable();
+    }
+
+    /**
+     * Trait should not allow any magic methods
+     *
+     * @test
+     * @expectedException \RuntimeException
+     * @expectedExceptionMessage Trait method ClassUsingInvalidTrait::__call()
+     */
+    public function shouldFailOnInvalidTraitMethod()
+    {
+        $fwMocker = new ClassMocker;
+        $fwMocker->registerTrait(InvalidTrait::class, 'ClassUsingInvalidTrait');
+        $fwMocker->mock('ClassUsingInvalidTrait');
+        $fwMocker->autoload('ClassUsingInvalidTrait');
     }
 
     /**
