@@ -201,7 +201,7 @@ class ClassGenerator extends ZendClassGenerator
         $name = $method->getName();
         $this->_method[$name] = $method;
 
-        $alias = '__' . lcfirst($trait) . ucfirst(trim($name, '_'));
+        $alias = '__' . lcfirst($trait) . ucfirst($name);
         $this->addTraitAlias($trait . '::' . $name, $alias);
         $this->addTraitMethod($trait, $name);
 
