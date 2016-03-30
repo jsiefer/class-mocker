@@ -23,7 +23,7 @@ use Zend\Code\Reflection\DocBlockReflection;
  */
 class ClassGenerator extends ZendClassGenerator
 {
-    const METHOD_TEMPLATE = 'return $this->___classMocker_call("%s", func_get_args(), %s);';
+    const METHOD_TEMPLATE = 'return $this->___classMocker_call("%s", func_get_args());';
 
     /**
      * @var int
@@ -46,6 +46,8 @@ class ClassGenerator extends ZendClassGenerator
     protected $_method = [];
 
     /**
+     * Generate mock class
+     *
      * @return string
      */
     public function generate()
@@ -110,13 +112,7 @@ class ClassGenerator extends ZendClassGenerator
         $method = new MethodGenerator();
         $method->setName($methodName);
         $method->setDocBlock($docBlock);
-        $method->setBody(
-            sprintf(
-                self::METHOD_TEMPLATE,
-                $methodName,
-                $methodReflection->isPublic() ? 'false' : 'true'
-            )
-        );
+        $method->setBody(sprintf(self::METHOD_TEMPLATE, $methodName));
 
         if ($methodReflection->isPublic()) {
             $method->setVisibility(MethodGenerator::VISIBILITY_PUBLIC);
@@ -147,8 +143,6 @@ class ClassGenerator extends ZendClassGenerator
         }
         $this->addMethodFromGenerator($method);
     }
-
-
 
     /**
      * @param string $extendedClass
@@ -247,8 +241,4 @@ class ClassGenerator extends ZendClassGenerator
         }
         $this->_traitMethods[$method][] = $trait;
     }
-
-
-
-
 }

@@ -40,9 +40,9 @@ abstract class BaseMock extends PHPUnitObject
      * If in enabled, call to protected and private methods
      * are allowed
      *
-     * @var bool
+     * @var int
      */
-    private $__enableClassScope = false;
+    private $__enableClassScope = 0;
 
     /**
      * @var int
@@ -59,10 +59,10 @@ abstract class BaseMock extends PHPUnitObject
      */
     public function __construct()
     {
-        $this->__enableClassScope = true;
+        $this->allowPrivateScope();
         $this->__callTraitMethods(self::CONSTRUCTOR, func_get_args());
         $this->__callTraitMethods(self::INIT, func_get_args());
-        $this->__enableClassScope = false;
+        $this->disallowPrivateScope();
     }
 
     /**
@@ -96,27 +96,38 @@ abstract class BaseMock extends PHPUnitObject
     }
 
     /**
-     * @param $name
-     * @param $arguments
-     * @param bool $internal
+     * Call method in private scope
+     *
+     * Used by parent mocks that implement traits
+     *
+     * @param string $name
+     * @param array $arguments
      *
      * @return BaseMock
      */
-    protected function ___classMocker_call($name, $arguments, $internal = false)
+    protected function ___classMocker_call($name, $arguments)
     {
-        if ($internal) {
-            $this->__enableClassScope = true;
-        }
+        $this->allowPrivateScope();
         $result = $this->__call($name, $arguments);
-        if ($internal) {
-            $this->__enableClassScope = false;
-        }
+        $this->disallowPrivateScope();
+
         return $result;
     }
 
     /**
-     * @param $name
-     * @param $arguments
+     * All methods should get called through the magic __call method
+     *
+     * It will...
+     *
+     * 1. check for any PHPUnit stubs
+     * 2. call closure functions
+     * 3. call trait methods
+     * 4. call magic trait __call method
+     * 5. call protected method if in internal scope
+     * 6. do default behavior
+     *
+     * @param string $name
+     * @param array $arguments
      *
      * @return $this
      */
@@ -145,15 +156,6 @@ abstract class BaseMock extends PHPUnitObject
             return $result;
         }
 
-        // allow call to protected methods
-        if (strpos($name, 'PROTECTED_') === 0) {
-            $method = substr($name, 10);
-            $result = $this->__callProtectedMethod($method, $arguments);
-            if (next::isNot($result)) {
-                return $result;
-            }
-        }
-
         /** @see \JSiefer\ClassMocker\Mock\BaseMock::__callClosureFunction() */
         if ($this->__enableClassScope) {
             $result = $this->__callProtectedMethod($name, $arguments);
@@ -166,9 +168,15 @@ abstract class BaseMock extends PHPUnitObject
     }
 
     /**
-     * Call all registered magic trait methods
+     * Call all registered trait methods
      *
-     * Traits can register to magic methods which will be called here
+     * Traits can register methods which will be called here
+     *
+     * Trait methods are allowed to call the parent trait method
+     * that is registered by another trait with a higher sort
+     *
+     * using next::parent() inside a trait method
+     * will call the parent trait method
      *
      * @param string $name
      * @param array $arguments
@@ -186,6 +194,8 @@ abstract class BaseMock extends PHPUnitObject
         }
 
         $method = $this->__reflection()->getMethod($name);
+
+        // don't allow calling private methods unless allowed
         if (!$method->isPublic() && !$this->__enableClassScope) {
             return $result;
         }
@@ -295,14 +305,14 @@ abstract class BaseMock extends PHPUnitObject
         $callable = $this->__properties[$name];
         $callable = $callable->bindTo($this);
 
-        $this->__enableClassScope = true;
+        $this->allowPrivateScope();
         try {
             $result = call_user_func_array($callable, $arguments);
-            $this->__enableClassScope = false;
+            $this->disallowPrivateScope();
 
         }
         catch(\Exception $e) {
-            $this->__enableClassScope = false;
+            $this->disallowPrivateScope();
             throw $e;
         }
 
@@ -310,7 +320,7 @@ abstract class BaseMock extends PHPUnitObject
     }
 
     /**
-     * Helper method to call a protected method
+     * Helper method to call a protected method from outside
      *
      * @param string $name
      * @param array $arguments
@@ -399,7 +409,23 @@ abstract class BaseMock extends PHPUnitObject
         return $this->__reflection;
     }
 
+    /**
+     * Allow calls to private/protected methods
+     */
+    private function allowPrivateScope()
+    {
+        $this->__enableClassScope++;
+    }
 
+    /**
+     * Disallow calls to private/protected methods
+     */
+    private function disallowPrivateScope()
+    {
+        if (--$this->__enableClassScope) {
+            $this->__enableClassScope = 0;
+        }
+    }
 
     /**
      * Retrieve all trait methods

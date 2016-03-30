@@ -193,8 +193,6 @@ class BaseMockTest extends \PHPUnit_Framework_TestCase
         $this->assertEquals(20, $dummy->__callProtectedMethod('privateMethod', [10]));
         $this->assertEquals(20, $dummy->__callProtectedMethod('publicMethod', [10]));
 
-        $this->assertEquals(20, $dummy->PROTECTED_protectedMethod(10));
-
         $this->assertNull($dummy->protectedMethod(10));
         $this->assertNull($dummy->privateMethod(10));
         $this->assertEquals(20, $dummy->publicMethod(10));
