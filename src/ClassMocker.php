@@ -10,6 +10,7 @@
 namespace JSiefer\ClassMocker;
 
 
+use JSiefer\ClassMocker\Footprint\ClassFootprint;
 use JSiefer\ClassMocker\Generator\FileGenerator;
 use JSiefer\ClassMocker\Generator\FileGeneratorBuilder;
 use JSiefer\ClassMocker\Reflection\ClassReflection;
@@ -22,11 +23,20 @@ use JSiefer\ClassMocker\Reflection\TraitReflection;
 class ClassMocker
 {
     /**
-     * The register class name patterns that we will mock
+     * The register class name patterns that we will get mock
+     * at any time
      *
      * @var string[]
      */
     protected $_mockPatterns = [];
+
+    /**
+     * The register class name patterns that we will get mock
+     * if no other autoload claims them
+     *
+     * @var string[]
+     */
+    protected $_optionalMockPatterns = [];
 
     /**
      * File Generator Builder
@@ -53,13 +63,12 @@ class ClassMocker
     /**
      * Enable class mocker by registering the auto loader
      *
-     * @param bool $prepend
-     *
      * @return $this
      */
-    public function enable($prepend = true)
+    public function enable()
     {
-        spl_autoload_register([$this, 'autoload'], true, $prepend);
+        spl_autoload_register([$this, 'autoload'], true, true);
+        spl_autoload_register([$this, 'autoloadOptional'], true, false);
         return $this;
     }
 
@@ -71,6 +80,7 @@ class ClassMocker
     public function disable()
     {
         spl_autoload_unregister([$this, 'autoload']);
+        spl_autoload_unregister([$this, 'autoloadOptional']);
         return $this;
     }
 
@@ -97,12 +107,18 @@ class ClassMocker
      * mock('Foo\Bar\*')
      *
      * @param string $pattern
+     * @param bool $ifNotExist
      *
      * @return $this
      */
-    public function mock($pattern)
+    public function mock($pattern, $ifNotExist = false)
     {
-        $this->_mockPatterns[] = $pattern;
+        if ($ifNotExist) {
+            $this->_optionalMockPatterns[] = $pattern;
+        } else {
+            $this->_mockPatterns[] = $pattern;
+        }
+
         return $this;
     }
 
@@ -119,6 +135,20 @@ class ClassMocker
     public function importFootprints($file)
     {
         $this->_builder->importFootprints($file);
+        return $this;
+    }
+
+    /**
+     * Register class footprint
+     *
+     * @param $className
+     * @param ClassFootprint $footprint
+     *
+     * @return $this
+     */
+    public function registerFootprint($className, ClassFootprint $footprint)
+    {
+        $this->_builder->registerFootprint($className, $footprint);
         return $this;
     }
 
@@ -159,15 +189,19 @@ class ClassMocker
      */
     public function autoload($className)
     {
-        foreach ($this->_mockPatterns as $pattern) {
-            if (!fnmatch($pattern, $className, FNM_NOESCAPE)) {
-                continue;
-            }
-            $this->generateAndLoadClass($className);
-            return true;
+        return $this->_autoload($this->_mockPatterns, $className);
+    }
 
-        }
-        return false;
+    /**
+     * Autoload handler for PHP
+     *
+     * @param string $className
+     *
+     * @return bool
+     */
+    public function autoloadOptional($className)
+    {
+        return $this->_autoload($this->_optionalMockPatterns, $className);
     }
 
     /**
@@ -198,6 +232,27 @@ class ClassMocker
         if ($filename && file_exists($filename)) {
             include $filename;
         }
+    }
+
+    /**
+     * Autoload class if matching any of given patterns
+     *
+     * @param string[] $patterns
+     * @param string $className
+     *
+     * @return bool
+     */
+    protected function _autoload($patterns, $className)
+    {
+        foreach ($patterns as $pattern) {
+            if (!fnmatch($pattern, $className, FNM_NOESCAPE)) {
+                continue;
+            }
+            $this->generateAndLoadClass($className);
+            return true;
+
+        }
+        return false;
     }
 
     /**
@@ -236,8 +291,11 @@ class ClassMocker
 
         $dir = dirname($path);
 
-        if (!is_dir($dir) && !mkdir($dir, 0777, true)) {
-            throw new \Exception("Failed to create class generation folder");
+        if (!is_dir($dir) && !@mkdir($dir, 0777, true)) {
+            $e = error_get_last();
+            throw new \RuntimeException(
+                "Failed to create class generation folder: " . $e['message']
+            );
         }
 
         return $path;

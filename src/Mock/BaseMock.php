@@ -16,11 +16,15 @@ use JSiefer\ClassMocker\next;
  */
 abstract class BaseMock extends PHPUnitObject
 {
-    const CONSTRUCTOR = '__construct';
-    const INIT = '__init';
-    const CALL = '__call';
-    const SETTER = '__set';
-    const GETTER = '__get';
+    const CONSTRUCTOR = '___construct';
+    const INIT = '___init';
+    const CALL = '___call';
+    const SETTER = '___set';
+    const GETTER = '___get';
+
+    const DEFAULT_BEHAVIOUR_RETURN_NULL = 1;
+    const DEFAULT_BEHAVIOUR_RETURN_SELF = 2;
+    const DEFAULT_BEHAVIOUR_THROW_EXCEPTION = 3;
 
     /**
      * @var array
@@ -28,75 +32,315 @@ abstract class BaseMock extends PHPUnitObject
     private $__properties = [];
 
     /**
+     * @var \ReflectionClass
+     */
+    private $__reflection;
+
+    /**
+     * If in enabled, call to protected and private methods
+     * are allowed
+     *
+     * @var int
+     */
+    private $__enableClassScope = 0;
+
+    /**
+     * @var int
+     */
+    private static $__defaultCallBehavior = self::DEFAULT_BEHAVIOUR_RETURN_NULL;
+
+    /**
      * @var string[][]
      */
-    protected static $__magicMethodRegistry = [];
+    private $_traitMethods;
 
     /**
      * DynamicBase constructor.
      */
     public function __construct()
     {
-        $this->callMagicMethods(self::CONSTRUCTOR, func_get_args());
-        $this->callMagicMethods(self::INIT, func_get_args());
-        $this->__call('__construct', func_get_args());
+        $this->allowPrivateScope();
+        $this->__callTraitMethods(self::CONSTRUCTOR, func_get_args());
+        $this->__callTraitMethods(self::INIT, func_get_args());
+        $this->disallowPrivateScope();
     }
 
     /**
-     * Call all registered magic trait methods
+     * Set default method call behavior
+     *
+     * Define how the base mock should handle invalid method calls
+     *
+     * @param int|\Closure $behavior
+     * @return void
+     * @throws \InvalidArgumentException
+     *
+     * @see \JSiefer\ClassMocker\Mock\BaseMock::__processDefaultMethodCall
+     */
+    public static function setDefaultCallBehavior($behavior)
+    {
+        // allow custom handlers
+        if ($behavior instanceof \Closure) {
+            self::$__defaultCallBehavior = $behavior;
+            return;
+        }
+
+        switch($behavior) {
+            case self::DEFAULT_BEHAVIOUR_RETURN_NULL:
+            case self::DEFAULT_BEHAVIOUR_RETURN_SELF;
+            case self::DEFAULT_BEHAVIOUR_THROW_EXCEPTION:
+                self::$__defaultCallBehavior = $behavior;
+                return;
+        }
+
+        throw new \InvalidArgumentException("Invalid behavior option ($behavior)");
+    }
+
+    /**
+     * Call method in private scope
+     *
+     * Used by parent mocks that implement traits
+     *
+     * @param string $name
+     * @param array $arguments
+     *
+     * @return BaseMock
+     */
+    protected function ___classMocker_call($name, $arguments)
+    {
+        $this->allowPrivateScope();
+        $result = $this->__call($name, $arguments);
+        $this->disallowPrivateScope();
+
+        return $result;
+    }
+
+    /**
+     * All methods should get called through the magic __call method
+     *
+     * It will...
+     *
+     * 1. check for any PHPUnit stubs
+     * 2. call closure functions
+     * 3. call trait methods
+     * 4. call magic trait __call method
+     * 5. call protected method if in internal scope
+     * 6. do default behavior
+     *
+     * @param string $name
+     * @param array $arguments
+     *
+     * @return $this
+     */
+    public function __call($name, $arguments)
+    {
+        // first call phpMock methods
+        $result = parent::__call($name, $arguments);
+        if (next::isNot($result)) {
+            return $result;
+        }
+
+        // check for closure functions
+        $result = $this->__callClosureFunction($name, $arguments);
+        if (next::isNot($result)) {
+            return $result;
+        }
+
+        $result = $this->__callTraitMethods($name, $arguments);
+        if (next::isNot($result)) {
+            return $result;
+        }
+
+        // give any magic trait methods a chance
+        $result = $this->__callTraitMethods(self::CALL, func_get_args());
+        if (next::isNot($result)) {
+            return $result;
+        }
+
+        /** @see \JSiefer\ClassMocker\Mock\BaseMock::__callClosureFunction() */
+        if ($this->__enableClassScope) {
+            $result = $this->__callProtectedMethod($name, $arguments);
+            if (next::isNot($result)) {
+                return $result;
+            }
+        }
+
+        return $this->__processDefaultMethodCall($name, $arguments);
+    }
+
+    /**
+     * Call all registered trait methods
+     *
+     * Traits can register methods which will be called here
+     *
+     * Trait methods are allowed to call the parent trait method
+     * that is registered by another trait with a higher sort
+     *
+     * using next::parent() inside a trait method
+     * will call the parent trait method
      *
      * @param string $name
      * @param array $arguments
      *
      * @return mixed
      */
-    private function callMagicMethods($name, $arguments)
+    private function __callTraitMethods($name, $arguments)
     {
         $result = next::caller();
 
-        if (!isset(static::$__magicMethodRegistry[$name])) {
+        $traitMethods = $this->getTraitMethods();
+
+        if (!isset($traitMethods[$name])) {
             return $result;
         }
 
-        foreach (static::$__magicMethodRegistry[$name] as $method) {
-            $result = call_user_func_array([$this, $method], $arguments);
-            if (next::isNot($result)) {
-                break;
+        $method = $this->__reflection()->getMethod($name);
+
+        // don't allow calling private methods unless allowed
+        if (!$method->isPublic() && !$this->__enableClassScope) {
+            return $result;
+        }
+
+        $methods = $traitMethods[$name];
+        $methods = array_reverse($methods);
+
+        $scope = $this;
+        $level = -1;
+
+        $parent = function($arguments) use($scope, $methods, &$level) {
+            $level++;
+            if ($level >= count($methods)) {
+                return next::caller();
             }
+            $result = call_user_func_array([$scope, $methods[$level]], $arguments);
+            $level--;
+            return $result;
+        };
+
+        next::__registerParentCallback($parent);
+        $result = $parent($arguments);
+        next::__registerParentCallback(null);
+
+        return $result;
+    }
+
+    /**
+     * Process default method call behavior
+     *
+     * It is recommended to set this once during bootstrapping
+     * and then stick to one process the whole time
+     *
+     * @param string $name
+     * @param array $arguments
+     *
+     * @return mixed
+     * @throws \BadMethodCallException
+     *
+     * @see \JSiefer\ClassMocker\Mock\BaseMock::setDefaultCallBehavior()
+     */
+    private function __processDefaultMethodCall($name, $arguments)
+    {
+        if (self::$__defaultCallBehavior instanceof \Closure) {
+            /** @var \Closure $handle */
+            $handle = self::$__defaultCallBehavior;
+            $handle = $handle->bindTo($this);
+            return call_user_func_array($handle, $arguments);
+        }
+
+        switch(self::$__defaultCallBehavior) {
+            case self::DEFAULT_BEHAVIOUR_RETURN_NULL:
+                if ($name === '__toString') {
+                    return '';
+                }
+                return null;
+
+            case self::DEFAULT_BEHAVIOUR_RETURN_SELF:
+                if ($name === '__toString') {
+                    return '';
+                }
+                return $this;
+        }
+
+        throw new \BadMethodCallException(
+            sprintf('Method %s::%s() does not exist', get_class($this), $name)
+        );
+    }
+
+    /**
+     * Call closure function if exist
+     *
+     * It is allowed to define closure functions as properties
+     * which then can get called similar to stubs
+     *
+     * The closure function will also have access to private and
+     * protected methods
+     *
+     * $object = new MyObject();
+     * $object->sum = function($a, $b) {
+     *    $this->result = $a+$b;
+     *    return $this->result;
+     * };
+     *
+     * $object->sum(5, 5); // = 10
+     * $object->result; // = 10
+     *
+     * @param string $name
+     * @param array $arguments
+     *
+     * @return next|mixed
+     * @throws \Exception
+     */
+    private function __callClosureFunction($name, $arguments)
+    {
+        $result = next::caller();
+
+        if (!isset($this->__properties[$name])) {
+            return $result;
+        }
+
+        if (!$this->__properties[$name] instanceof \Closure) {
+            return $result;
+        }
+
+        /** @var \Closure $callable */
+        $callable = $this->__properties[$name];
+        $callable = $callable->bindTo($this);
+
+        $this->allowPrivateScope();
+        try {
+            $result = call_user_func_array($callable, $arguments);
+            $this->disallowPrivateScope();
+
+        }
+        catch(\Exception $e) {
+            $this->disallowPrivateScope();
+            throw $e;
         }
 
         return $result;
     }
 
     /**
-     * @param $name
-     * @param $arguments
+     * Helper method to call a protected method from outside
      *
-     * @return $this
+     * @param string $name
+     * @param array $arguments
+     *
+     * @return mixed
      */
-    public function __call($name, $arguments)
+    public function __callProtectedMethod($name, $arguments = [])
     {
-        // check if we have a closure as property
-        if (isset($this->__properties[$name]) && $this->__properties[$name] instanceof \Closure) {
-            $callable = $this->__properties[$name]->bindTo($this);
-            return call_user_func_array($callable, $arguments);
+        try {
+            $method = $this->__reflection()->getMethod($name);
+        }
+        catch(\Exception $e) {
+            return next::caller();
         }
 
-        // give any magic trait methods a chance
-        $result = $this->callMagicMethods(self::CALL, func_get_args());
-        if (next::isNot($result)) {
-            return $result;
-        }
+        $method->setAccessible(true);
+        $result =  $method->invokeArgs($this, $arguments);
+        $method->setAccessible(false);
 
-        // allow call to protected methods
-        if (strpos($name, 'PROTECTED_') === 0) {
-            $method = substr($name, 10);
-            if (method_exists($this, $method)) {
-                return call_user_func_array([$this, $method], $arguments);
-            }
-        }
-
-        return parent::__call($name, $arguments);
+        return $result;
     }
 
     /**
@@ -106,7 +350,7 @@ abstract class BaseMock extends PHPUnitObject
      */
     public function __get($name)
     {
-        $result = $this->callMagicMethods(self::GETTER, func_get_args());
+        $result = $this->__callTraitMethods(self::GETTER, func_get_args());
         if (next::isNot($result)) {
             return $result;
         }
@@ -124,8 +368,11 @@ abstract class BaseMock extends PHPUnitObject
      */
     public function __set($name, $value)
     {
-        $this->callMagicMethods(self::SETTER, func_get_args());
-        $this->__properties[$name] = $value;
+        $result = $this->__callTraitMethods(self::SETTER, func_get_args());
+
+        if (!next::isNot($result)) {
+            $this->__properties[$name] = $value;
+        }
     }
 
     /**
@@ -149,4 +396,69 @@ abstract class BaseMock extends PHPUnitObject
         return;
     }
 
+    /**
+     * Retrieve a reflection of the current class
+     *
+     * @return \ReflectionClass
+     */
+    private function __reflection()
+    {
+        if (!$this->__reflection) {
+            $this->__reflection = new \ReflectionClass(get_class($this));
+        }
+        return $this->__reflection;
+    }
+
+    /**
+     * Allow calls to private/protected methods
+     */
+    private function allowPrivateScope()
+    {
+        $this->__enableClassScope++;
+    }
+
+    /**
+     * Disallow calls to private/protected methods
+     */
+    private function disallowPrivateScope()
+    {
+        if (--$this->__enableClassScope) {
+            $this->__enableClassScope = 0;
+        }
+    }
+
+    /**
+     * Retrieve all trait methods
+     *
+     * @return array
+     */
+    private function getTraitMethods()
+    {
+        if (!is_array($this->_traitMethods)) {
+            $this->_traitMethods = $this->mergeTraitMethods();
+        }
+        return $this->_traitMethods;
+    }
+
+    /**
+     * Merge all trait methods from all parents
+     *
+     * @return array
+     */
+    private function mergeTraitMethods()
+    {
+        $reflection = $this->__reflection();
+        $mergedMethods = [];
+        do {
+            $staticProperties = $reflection->getStaticProperties();
+
+            if (!isset($staticProperties['___classMocker_traitMethods'])) {
+                continue;
+            }
+
+            $mergedMethods = array_merge_recursive($mergedMethods, $staticProperties['___classMocker_traitMethods']);
+        } while ($reflection = $reflection->getParentClass());
+
+        return $mergedMethods;
+    }
 }

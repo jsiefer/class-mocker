@@ -11,6 +11,7 @@ namespace JSiefer\ClassMocker\Reflection;
 
 use JSiefer\ClassMocker\TestClasses\DummyClass;
 use JSiefer\ClassMocker\TestClasses\SecondDummyClass;
+use JSiefer\ClassMocker\TestClasses\ThirdDummyClass;
 
 
 /**
@@ -33,6 +34,10 @@ class ClassReflectionTest extends \PHPUnit_Framework_TestCase
 
         $reflection = new ClassReflection(SecondDummyClass::class);
         $this->assertEquals('MyClass_*', $reflection->getPattern());
+        $this->assertEquals(0, $reflection->getSort());
+
+        $reflection = new ClassReflection(ThirdDummyClass::class);
+        $this->assertEquals('', $reflection->getPattern());
         $this->assertEquals(0, $reflection->getSort());
     }
 

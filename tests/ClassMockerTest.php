@@ -9,8 +9,12 @@
  */
 namespace JSiefer\ClassMocker;
 
+use JSiefer\ClassMocker\Footprint\ClassFootprint;
 use JSiefer\ClassMocker\Mock\BaseMock;
 use JSiefer\ClassMocker\TestClasses\DummyTrait;
+use JSiefer\ClassMocker\TestClasses\InvalidTrait;
+use JSiefer\ClassMocker\TestClasses\Readable;
+use JSiefer\ClassMocker\TestClasses\Talkable;
 use JSiefer\ClassMocker\TestClasses\TestClass;
 use JSiefer\ClassMocker\TestClasses\TestMock;
 use JSiefer\ClassMocker\TestClasses\TraitA;
@@ -28,6 +32,16 @@ use org\bovigo\vfs\vfsStream;
 class ClassMockerTest extends \PHPUnit_Framework_TestCase
 {
     /**
+     * Set up
+     *
+     * @return void
+     */
+    public function setUp()
+    {
+        BaseMock::setDefaultCallBehavior(BaseMock::DEFAULT_BEHAVIOUR_RETURN_NULL);
+    }
+
+    /**
      * @test
      */
     public function testAutoload()
@@ -38,14 +52,18 @@ class ClassMockerTest extends \PHPUnit_Framework_TestCase
         $fwMocker->mock('SomeClass');
         $fwMocker->mock('Foobar_*');
         $fwMocker->mock('Bar_Foo_*Collection');
-        $fwMocker->mock('Testing\A\*Test');
+        $fwMocker->mock('Testing\A\*Test', true);
 
         // check auto loads
         $this->assertTrue($fwMocker->autoload('SomeClass'));
         $this->assertTrue($fwMocker->autoload('Foobar_HelloWorld'));
         $this->assertTrue($fwMocker->autoload('Bar_Foo_Model_TestCollection'));
-        $this->assertTrue($fwMocker->autoload('Testing\A\FoobarTest'));
 
+        // check optional autoloads
+        $this->assertFalse($fwMocker->autoload('Testing\A\FoobarTest'));
+        $this->assertTrue($fwMocker->autoloadOptional('Testing\A\FoobarTest'));
+
+        // should not get loaded
         $this->assertFalse($fwMocker->autoload('Bar_Foo_Model_Sample'));
         $this->assertFalse($fwMocker->autoload('SomeClass_Test'));
         $this->assertFalse($fwMocker->autoload('Testing\A\Foo'));
@@ -58,6 +76,27 @@ class ClassMockerTest extends \PHPUnit_Framework_TestCase
         $this->assertTrue($vfs->hasChild('generation/Foobar_HelloWorld.php'));
         $this->assertTrue($vfs->hasChild('generation/Bar_Foo_Model_TestCollection.php'));
         $this->assertTrue($vfs->hasChild('generation/Testing/A/FoobarTest.php'));
+    }
+
+    /**
+     * Check and validate generation folder
+     *
+     * @test
+     * @expectedException \RuntimeException
+     * @expectedExceptionMessage Failed to create class generation folder
+     */
+    public function shouldFailOnInvalidGenerationDir()
+    {
+        $vfs = vfsStream::setup('generation');
+
+        $dir = $vfs->url('generation');
+
+        file_put_contents($dir.'/test', 'foobar');
+
+        $fwMocker = new ClassMocker;
+        $fwMocker->setGenerationDir($dir.'/test');
+        $fwMocker->mock('ShouldFailOnInvalidGenerationDirTestClass');
+        $fwMocker->autoload('ShouldFailOnInvalidGenerationDirTestClass');
     }
 
     /**
@@ -80,6 +119,7 @@ class ClassMockerTest extends \PHPUnit_Framework_TestCase
     public function testTraitInclusion()
     {
         $fwMocker = new ClassMocker;
+        //$fwMocker->setGenerationDir('./var/generation');
         $fwMocker->mock('Foobar*');
         $fwMocker->mock('Demo\*Collection');
         $fwMocker->registerTrait(TraitA::class);
@@ -91,33 +131,75 @@ class ClassMockerTest extends \PHPUnit_Framework_TestCase
         $fwMocker->registerTrait(TraitB::class, 'Demo\*Collection', 50);
         $fwMocker->registerTrait(TraitC::class, 'Demo\*Collection', 100);
         $fwMocker->registerTrait(DummyTrait::class, 'Demo\*Collection');
+        $fwMocker->registerTrait(DummyTrait::class, 'Foobar_MyTrait2');
+
+        $footprint = new ClassFootprint();
+        $footprint->addInterface(Readable::class);
+        $footprint->addInterface(Talkable::class);
+        $fwMocker->registerFootprint('Foobar_MyTrait', $footprint);
+
+        $footprint = new ClassFootprint();
+        $footprint->setParent('Foobar_MyTrait');
+        $fwMocker->registerFootprint('Foobar_MyTrait2', $footprint);
+
         $fwMocker->enable();
 
-        $instance = new \Foobar_MyTrait();
 
-        // check that all trait:__init methods are called.
-        $this->assertEquals('HelloWorld!!!', $instance->output);
-
-        // check common predefined trait usage
-       // $instance->setFoo('bar');
-        //$this->assertEquals('bar', $instance->getData('foo'));
-        //$this->assertEquals('bar', $instance->getFoo());
-
-
+        $instance = new \Foobar_MyTrait2();
         $this->assertInstanceOf('Foobar_MyTrait', $instance);
-        $this->assertEquals('TraitC:talk', $instance->talk());
+        $this->assertInstanceOf('Foobar_MyTrait2', $instance);
+
+
+        $this->assertNull($instance->protectedMethod(10));
+        $this->assertEquals(20, $instance->publicMethod(10));
+
+        /**
+         * Check that all trait:___init methods are called.
+         *
+         * @see \JSiefer\ClassMocker\TestClasses\TraitA::___init()
+         * @see \JSiefer\ClassMocker\TestClasses\TraitB::___init()
+         * @see \JSiefer\ClassMocker\TestClasses\TraitC::___init()
+         */
+        $this->assertEquals('Hello World!!!', $instance->output);
+        $this->assertTrue($instance->getFoobar());
+        $this->assertEquals('test', $instance->foobar);
+
+
+        $this->assertEquals('TraitC:talk', $instance->talk('test'));
         $this->assertEquals('TraitC:listen', $instance->listen());
         $this->assertEquals('TraitC:jump', $instance->jump());
         $this->assertEquals('TraitB:show', $instance->show());
         $this->assertEquals('TraitB:hide', $instance->hide());
         $this->assertEquals('TraitA:read', $instance->read());
 
+        /**
+         * Make sure method-stubs will always overwrite any
+         * trait implementation
+         */
+        $instance->method('jump')->willReturn('I JUMPED');
+        $this->assertEquals('I JUMPED', $instance->jump());
+
         // test different orders
         $collection = new \Demo\TestCollection();
-        $this->assertEquals('TraitA:talk', $collection->talk());
+        $this->assertEquals('TraitA:talk', $collection->talk('test'));
         $this->assertEquals('TraitA:show', $collection->show());
 
         $fwMocker->disable();
+    }
+
+    /**
+     * Trait should not allow any magic methods
+     *
+     * @test
+     * @expectedException \RuntimeException
+     * @expectedExceptionMessage Trait method ClassUsingInvalidTrait::__call()
+     */
+    public function shouldFailOnInvalidTraitMethod()
+    {
+        $fwMocker = new ClassMocker;
+        $fwMocker->registerTrait(InvalidTrait::class, 'ClassUsingInvalidTrait');
+        $fwMocker->mock('ClassUsingInvalidTrait');
+        $fwMocker->autoload('ClassUsingInvalidTrait');
     }
 
     /**

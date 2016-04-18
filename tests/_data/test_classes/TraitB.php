@@ -13,14 +13,15 @@ use JSiefer\ClassMocker\next;
  * @pattern Foobar_MyTrait
  * @sort 90
  * @package JSiefer\ClassMocker
+ *
+ * @property string $output
  */
 trait TraitB
 {
 
-    protected function __init()
+    protected function ___init()
     {
-        $this->output .= "World";
-        return next::caller();
+        next::parent("World");
     }
 
     /**
@@ -31,9 +32,6 @@ trait TraitB
         return 'TraitB:hide';
     }
 
-    /**
-     * @return string
-     */
     public function show()
     {
         return 'TraitB:show';

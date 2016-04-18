@@ -12,31 +12,49 @@ use JSiefer\ClassMocker\next;
  * @pattern Foobar_MyTrait
  * @sort 100
  * @package JSiefer\ClassMocker
+ *
+ * @method string getFoobar()
+ * @property string $foobar
+ * @property string $output
  */
 trait TraitA
 {
 
 
-    protected function __init()
+    protected function ___init($name = '')
     {
-        $this->output .= "Hello";
-        return next::caller();
+        $this->output = "Hello " . $name;
+        return next::parent();
     }
 
 
-    public function __call($name, $arguments)
+    public function ___call($name, $arguments)
     {
-        if($name == 'getFoobar') {
+        if ($name == 'getFoobar') {
             return true;
         }
-        return next::caller();
+
+        return next::parent($name, $arguments);
     }
 
+    public function ___get($name)
+    {
+        if ($name == 'foobar') {
+            return 'test';
+        }
+
+        return next::parent($name);
+    }
 
     /**
+     * @param $what
+     * @param int $volume
+     *
+     * @param Human $target
+     *
      * @return string
      */
-    public function talk()
+    public function talk($what, $volume = 100, Human &$target = null)
     {
         return 'TraitA:talk';
     }
@@ -58,9 +76,13 @@ trait TraitA
     }
 
     /**
+     * @param string $book
+     * @param int $page
+     * @param array $lines
+     *
      * @return string
      */
-    public function read()
+    public function read($book = '', $page = 0, array $lines = [])
     {
         return 'TraitA:read';
     }
