@@ -10,7 +10,7 @@ use JSiefer\ClassMocker\next;
  *
  * A test trait dummy for testing trait usage
  *
- * @pattern Foobar_MyTrait
+ * @pattern Foobar\BaseClass
  * @sort 80
  * @package JSiefer\ClassMocker
  *

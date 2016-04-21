@@ -33,10 +33,10 @@ class TraitRegistryTest extends \PHPUnit_Framework_TestCase
         $registry = new TraitRegistry();
         $registry->register(TraitB::class);
         $registry->register(TraitC::class);
-        $registry->register(TraitSample::class, 'Foobar_*', 0);
+        $registry->register(TraitSample::class, 'Foobar\*', 0);
         $registry->register(TraitA::class);
 
-        $result = $registry->findByClass('Foobar_MyTrait');
+        $result = $registry->findByClass('Foobar\BaseClass');
 
         $this->assertEquals(TraitA::class, $result[0]->getName());
         $this->assertEquals(TraitB::class, $result[1]->getName());

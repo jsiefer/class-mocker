@@ -42,45 +42,127 @@ class ClassMockerTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
+     * Test auto loading based on wildcards
+     *
+     * e.g.
+     * mock('Namespace_*')
+     *
+     * @return void
      * @test
      */
-    public function testAutoload()
+    public function testWildcardAutoload()
+    {
+        $classMocker = new ClassMocker();
+        $classMocker->mock('SomeClass');
+        $classMocker->mock('Foobar_*');
+        $classMocker->mock('Bar_Foo_*Collection');
+        $classMocker->mock('Foo\Bar\*');
+
+        $assertion = [
+            'SomeClass'                     => true,
+            'Foobar_HelloWorld'             => true,
+            'Bar_Foo_Model_TestCollection'  => true,
+            'Foo\Bar\TestClass'             => true,
+            'Bar_Foo_Model_Sample'          => false,
+            'SomeClass_Test'                => false,
+            'Foo\Test\Bar'                  => false,
+        ];
+
+        foreach ($assertion as $className => $expect) {
+            $result = $classMocker->autoload($className);
+            $this->assertEquals(
+                $expect,
+                $result,
+                $expect
+                    ? "Should autoload class '$className' "
+                    : "Should NOT autoload class '$className' "
+
+            );
+        }
+    }
+
+    /**
+     * Test class initialization and make sure it
+     * extends from the BaseMock class
+     *
+     * @return void
+     * @test
+     */
+    public function testClassInitialization()
+    {
+        $classMocker = new ClassMocker();
+        $classMocker->mock('Foobar\*');
+        $classMocker->autoload('Foobar\Test\HelloWorld');
+
+        $instance = new \Foobar\Test\HelloWorld();
+
+        $this->assertInstanceOf(
+            BaseMock::class,
+            $instance,
+            'All created mock instances should extent from BaseMock'
+        );
+    }
+
+    /**
+     * Optional autoload should only load classes that could
+     * not get loaded by composer
+     *
+     * @return void
+     * @test
+     */
+    public function testOptionalAutoload()
+    {
+        $defaultClass = 'Foobar\NotOptional\Foobar';
+        $optionalClass = 'Foobar\Optional\Foobar';
+
+        $classMocker = new ClassMocker();
+        $classMocker->mock($defaultClass, false);
+        $classMocker->mock($optionalClass, true);
+
+        $this->assertFalse(
+            $classMocker->autoload($optionalClass),
+            'Class should not get loaded using the default autoload'
+        );
+        $this->assertFalse(
+            $classMocker->autoloadOptional($defaultClass),
+            'Class should not get loaded using the optional autoload'
+        );
+        $this->assertTrue(
+            $classMocker->autoload($defaultClass),
+            'Class should not get loaded using the default autoload'
+        );
+        $this->assertTrue(
+            $classMocker->autoloadOptional($optionalClass),
+            'Class should get loaded using the optional autoload'
+        );
+    }
+
+    /**
+     * When generation dir is defined all generated classes
+     * should get saved and cached in the given directory
+     *
+     * @return void
+     * @test
+     */
+    public function testGenerationDirFolder()
     {
         $vfs = vfsStream::setup('generation');
-        $fwMocker = new ClassMocker;
-        $fwMocker->setGenerationDir($vfs->url('generation'));
-        $fwMocker->mock('SomeClass');
-        $fwMocker->mock('Foobar_*');
-        $fwMocker->mock('Bar_Foo_*Collection');
-        $fwMocker->mock('Testing\A\*Test', true);
 
-        // check auto loads
-        $this->assertTrue($fwMocker->autoload('SomeClass'));
-        $this->assertTrue($fwMocker->autoload('Foobar_HelloWorld'));
-        $this->assertTrue($fwMocker->autoload('Bar_Foo_Model_TestCollection'));
+        $classMocker = new ClassMocker();
+        $classMocker->setGenerationDir($vfs->url());
+        $classMocker->mock('Foobar\*');
+        $classMocker->autoload('Foobar\Test\GenerationDir');
 
-        // check optional autoloads
-        $this->assertFalse($fwMocker->autoload('Testing\A\FoobarTest'));
-        $this->assertTrue($fwMocker->autoloadOptional('Testing\A\FoobarTest'));
-
-        // should not get loaded
-        $this->assertFalse($fwMocker->autoload('Bar_Foo_Model_Sample'));
-        $this->assertFalse($fwMocker->autoload('SomeClass_Test'));
-        $this->assertFalse($fwMocker->autoload('Testing\A\Foo'));
-
-        // check that class actually exist
-        $instance = new \Foobar_HelloWorld();
-        $this->assertInstanceOf(BaseMock::class, $instance);
-
-        $this->assertTrue($vfs->hasChild('generation/SomeClass.php'));
-        $this->assertTrue($vfs->hasChild('generation/Foobar_HelloWorld.php'));
-        $this->assertTrue($vfs->hasChild('generation/Bar_Foo_Model_TestCollection.php'));
-        $this->assertTrue($vfs->hasChild('generation/Testing/A/FoobarTest.php'));
+        $this->assertTrue(
+            $vfs->hasChild('Foobar/Test/GenerationDir.php'),
+            'Should have created cache class file in generation dir'
+        );
     }
 
     /**
      * Check and validate generation folder
      *
+     * @return void
      * @test
      * @expectedException \RuntimeException
      * @expectedExceptionMessage Failed to create class generation folder
@@ -89,110 +171,43 @@ class ClassMockerTest extends \PHPUnit_Framework_TestCase
     {
         $vfs = vfsStream::setup('generation');
 
-        $dir = $vfs->url('generation');
+        $testDir = $vfs->url() . '/test';
 
-        file_put_contents($dir.'/test', 'foobar');
+        file_put_contents($testDir, 'Not a dir!');
 
-        $fwMocker = new ClassMocker;
-        $fwMocker->setGenerationDir($dir.'/test');
-        $fwMocker->mock('ShouldFailOnInvalidGenerationDirTestClass');
-        $fwMocker->autoload('ShouldFailOnInvalidGenerationDirTestClass');
+        $classMocker = new ClassMocker;
+        $classMocker->setGenerationDir($testDir);
+        $classMocker->mock('ShouldFailOnInvalidGenerationDirTestClass');
+        $classMocker->autoload('ShouldFailOnInvalidGenerationDirTestClass');
     }
 
     /**
+     * Should throw an exception if class has been loaded already
+     *
+     * @return void
      * @test
      * @expectedException \RuntimeException
-     * @depends testAutoload
+     * @expectedExceptionMessage Unable to generate and load already existing class
      */
-    public function testAutoLoadExistingClass()
+    public function shouldThrowExceptionOnLoadingExistingClass()
     {
-        $fwMocker = new ClassMocker;
-        $fwMocker->mock('SomeClass');
-
-        $fwMocker->autoload('SomeClass');
-
-    }
-
-    /**
-     * @test
-     */
-    public function testTraitInclusion()
-    {
-        $fwMocker = new ClassMocker;
-        //$fwMocker->setGenerationDir('./var/generation');
-        $fwMocker->mock('Foobar*');
-        $fwMocker->mock('Demo\*Collection');
-        $fwMocker->registerTrait(TraitA::class);
-        $fwMocker->registerTrait(TraitB::class);
-        $fwMocker->registerTrait(TraitC::class);
-
-        // test @for and @sort overwrite
-        $fwMocker->registerTrait(TraitA::class, 'Demo\*Collection', 0);
-        $fwMocker->registerTrait(TraitB::class, 'Demo\*Collection', 50);
-        $fwMocker->registerTrait(TraitC::class, 'Demo\*Collection', 100);
-        $fwMocker->registerTrait(DummyTrait::class, 'Demo\*Collection');
-        $fwMocker->registerTrait(DummyTrait::class, 'Foobar_MyTrait2');
-
-        $footprint = new ClassFootprint();
-        $footprint->addInterface(Readable::class);
-        $footprint->addInterface(Talkable::class);
-        $fwMocker->registerFootprint('Foobar_MyTrait', $footprint);
-
-        $footprint = new ClassFootprint();
-        $footprint->setParent('Foobar_MyTrait');
-        $fwMocker->registerFootprint('Foobar_MyTrait2', $footprint);
-
-        $fwMocker->enable();
-
-
-        $instance = new \Foobar_MyTrait2();
-        $this->assertInstanceOf('Foobar_MyTrait', $instance);
-        $this->assertInstanceOf('Foobar_MyTrait2', $instance);
-
-
-        $this->assertNull($instance->protectedMethod(10));
-        $this->assertEquals(20, $instance->publicMethod(10));
-
-        /**
-         * Check that all trait:___init methods are called.
-         *
-         * @see \JSiefer\ClassMocker\TestClasses\TraitA::___init()
-         * @see \JSiefer\ClassMocker\TestClasses\TraitB::___init()
-         * @see \JSiefer\ClassMocker\TestClasses\TraitC::___init()
-         */
-        $this->assertEquals('Hello World!!!', $instance->output);
-        $this->assertTrue($instance->getFoobar());
-        $this->assertEquals('test', $instance->foobar);
-
-
-        $this->assertEquals('TraitC:talk', $instance->talk('test'));
-        $this->assertEquals('TraitC:listen', $instance->listen());
-        $this->assertEquals('TraitC:jump', $instance->jump());
-        $this->assertEquals('TraitB:show', $instance->show());
-        $this->assertEquals('TraitB:hide', $instance->hide());
-        $this->assertEquals('TraitA:read', $instance->read());
-
-        /**
-         * Make sure method-stubs will always overwrite any
-         * trait implementation
-         */
-        $instance->method('jump')->willReturn('I JUMPED');
-        $this->assertEquals('I JUMPED', $instance->jump());
-
-        // test different orders
-        $collection = new \Demo\TestCollection();
-        $this->assertEquals('TraitA:talk', $collection->talk('test'));
-        $this->assertEquals('TraitA:show', $collection->show());
-
-        $fwMocker->disable();
+        $classMocker = new ClassMocker();
+        $classMocker->mock(self::class);
+        $classMocker->autoload(self::class);
     }
 
     /**
      * Trait should not allow any magic methods
      *
+     * Magic methods like __call() can not be used by traits
+     * without causing conflict with the BaseMock
+     *
+     * Instead use ___call() methods
+     *
+     * @return void
      * @test
      * @expectedException \RuntimeException
-     * @expectedExceptionMessage Trait method ClassUsingInvalidTrait::__call()
+     * @expectedExceptionMessage Trait magic method ClassUsingInvalidTrait::__call()
      */
     public function shouldFailOnInvalidTraitMethod()
     {
@@ -203,7 +218,12 @@ class ClassMockerTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
+     * TestClass implements the Foo_Bar_Interface which should
+     * get created automatically
+     *
+     * @return void
      * @test
+     * @see \JSiefer\ClassMocker\TestClasses\TestClass
      */
     public function testInterfaceLoading()
     {
@@ -212,12 +232,22 @@ class ClassMockerTest extends \PHPUnit_Framework_TestCase
         $fwMocker->enable();
 
         $test = new TestClass();
-        $this->assertInstanceOf('Foo_Bar_Interface', $test);
+        $this->assertInstanceOf(
+            'Foo_Bar_Interface',
+            $test,
+            'Unable to create interface on the fly'
+        );
 
         $fwMocker->disable();
     }
 
-
+    /**
+     * If register base class they must implement the BaseMock class
+     *
+     * @return void
+     * @test
+     * @see \JSiefer\ClassMocker\TestClasses\TestMock
+     */
     public function testBaseClass()
     {
         $fwMocker = new ClassMocker;
@@ -227,13 +257,26 @@ class ClassMockerTest extends \PHPUnit_Framework_TestCase
 
         $instance = new \MyMock_TestA();
 
-        $this->assertInstanceOf(BaseMock::class, $instance);
-        $this->assertInstanceOf(TestMock::class, $instance);
+        $this->assertInstanceOf(
+            BaseMock::class,
+            $instance,
+            'Instance does not extend from BaseMock'
+        );
+        $this->assertInstanceOf(
+            TestMock::class,
+            $instance,
+            'Instance does not extend from registered base class'
+        );
 
         $fwMocker->disable();
     }
 
-
+    /**
+     * Test PHPUnit expects method
+     *
+     * @return void
+     * @test
+     */
     public function testExpectationMethods()
     {
         $fwMocker = new ClassMocker;
@@ -241,13 +284,21 @@ class ClassMockerTest extends \PHPUnit_Framework_TestCase
         $fwMocker->enable();
 
         $test = new \Expect_Something();
-        $test->expects($this->once())->method('hello')->will($this->returnValue('Hello World'));
+        $test->expects($this->once())
+             ->method('hello')
+             ->will($this->returnValue('Hello World'));
+
         $this->assertEquals('Hello World', $test->hello());
 
         $fwMocker->disable();
     }
 
-
+    /**
+     * Test footprints imported from json test file
+     *
+     * @return void
+     * @test
+     */
     public function testFootprintJsonImport()
     {
         $fwMocker = new ClassMocker();
@@ -257,8 +308,16 @@ class ClassMockerTest extends \PHPUnit_Framework_TestCase
 
         $test = new ObjectB();
 
-        $this->assertEquals('foobar', ObjectA::EVENT);
-        $this->assertEquals(100, ObjectA::SORT);
+        $this->assertEquals(
+            'foobar',
+            ObjectA::EVENT,
+            'Constant was not loaded correctly from test.ref.json'
+        );
+        $this->assertEquals(
+            100,
+            ObjectA::SORT,
+            'Constant was not loaded correctly from test.ref.json'
+        );
 
         $this->assertInstanceOf(ObjectA::class, $test);
         $this->assertInstanceOf(ObjectB::class, $test);
@@ -266,7 +325,12 @@ class ClassMockerTest extends \PHPUnit_Framework_TestCase
         $this->assertInstanceOf(BaseMock::class, $test);
     }
 
-
+    /**
+     * Test framework register
+     *
+     * @return void
+     * @test
+     */
     public function testFrameworkMock()
     {
         $framework = $this->getMockForAbstractClass(FrameworkInterface::class);
@@ -275,5 +339,4 @@ class ClassMockerTest extends \PHPUnit_Framework_TestCase
         $fwMocker = new ClassMocker();
         $fwMocker->mockFramework($framework);
     }
-
 }
