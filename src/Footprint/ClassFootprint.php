@@ -13,6 +13,8 @@ namespace JSiefer\ClassMocker\Footprint;
 
 /**
  * Class ClassFootprint
+ *
+ * @see \JSiefer\ClassMocker\Footprint\ClassFootprintTest
  */
 class ClassFootprint
 {
@@ -124,7 +126,11 @@ class ClassFootprint
      */
     public function setConstants(array $constants)
     {
-        $this->_constants = $constants;
+        $this->_constants = [];
+        foreach ($constants as $name => $value) {
+            $this->addConstant($name, $value);
+        }
+
         return $this;
     }
 
@@ -164,7 +170,10 @@ class ClassFootprint
      */
     public function setInterfaces(array $interfaces)
     {
-        $this->_interfaces = $interfaces;
+        $this->_interfaces = [];
+        foreach ($interfaces as $interface) {
+            $this->addInterface($interface);
+        }
         return $this;
     }
 

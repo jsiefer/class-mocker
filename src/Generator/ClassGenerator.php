@@ -52,43 +52,96 @@ class ClassGenerator extends ZendClassGenerator
      */
     public function generate()
     {
-        if (!empty($this->_traitMethodsAliases)) {
-            $this->addProperty(
-                '___classMocker_traitMethods',
-                $this->_traitMethodsAliases,
-                PropertyGenerator::FLAG_PRIVATE | PropertyGenerator::FLAG_STATIC
-            );
-
-            foreach (array_keys($this->_traitMethodsAliases) as $methodName) {
-
-                switch ($methodName) {
-                    case BaseMock::CALL:
-                    case BaseMock::CONSTRUCTOR:
-                    case BaseMock::GETTER:
-                    case BaseMock::SETTER:
-                    case BaseMock::INIT:
-                        continue 2;
-                }
-
-                switch ('_' . $methodName) {
-                    case BaseMock::CALL:
-                    case BaseMock::CONSTRUCTOR:
-                    case BaseMock::GETTER:
-                    case BaseMock::SETTER:
-                        throw new \RuntimeException(
-                            sprintf(
-                                "Trait method %s::%s() is not valid, use %s() instead",
-                                $this->getName(),
-                                $methodName,
-                                '_' . $methodName
-                            )
-                        );
-                }
-
-                $this->generateMethod($methodName);
-            }
-        }
+        $this->generateTraitMethods();
         return parent::generate();
+    }
+
+    /**
+     * Generate foot print of all methods specified by all
+     * traits registered to this mock class
+     *
+     * Register all trait methods to the private static
+     * property ___classMocker_traitMethods which is accessible to
+     * the base mock object and used to call all trait methods in order
+     *
+     * @see \JSiefer\ClassMocker\Mock\BaseMock::mergeTraitMethods()
+     *
+     * @return void
+     */
+    protected function generateTraitMethods()
+    {
+        if (empty($this->_traitMethodsAliases)) {
+            return;
+        }
+
+        $this->addProperty(
+            '___classMocker_traitMethods',
+            $this->_traitMethodsAliases,
+            PropertyGenerator::FLAG_PRIVATE | PropertyGenerator::FLAG_STATIC
+        );
+
+        foreach (array_keys($this->_traitMethodsAliases) as $methodName) {
+
+            if (!$this->canGenerateMethod($methodName)) {
+                continue;
+            }
+
+            if (!$this->isValidTraitMethod($methodName)) {
+                throw new \RuntimeException(
+                    sprintf(
+                        "Trait magic method %s::%s() is not valid, use %s() instead",
+                        $this->getName(),
+                        $methodName,
+                        '_' . $methodName
+                    )
+                );
+            }
+
+            $this->generateMethod($methodName);
+        }
+    }
+
+    /**
+     * Check if method can be generated
+     *
+     * @param string $methodName
+     *
+     * @return bool
+     */
+    public function canGenerateMethod($methodName)
+    {
+        /**
+         * any special methods only called by the base mock class
+         * and therefor should not be made accessible
+         *
+         * @see \JSiefer\ClassMocker\Mock\BaseMock::__callTraitMethods()
+         */
+        switch ($methodName) {
+            case BaseMock::CALL:
+            case BaseMock::CONSTRUCTOR:
+            case BaseMock::GETTER:
+            case BaseMock::SETTER:
+            case BaseMock::INIT:
+                return false;
+        }
+        return true;
+    }
+
+    /**
+     * Check if method name is valid
+     *
+     * @param string $methodName
+     *
+     * @return bool
+     */
+    public function isValidTraitMethod($methodName)
+    {
+        $illegal = ['__get', '__set', '__call', '__construct'];
+
+        if (in_array($methodName, $illegal)) {
+            return false;
+        }
+        return true;
     }
 
     /**

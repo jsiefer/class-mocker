@@ -9,7 +9,8 @@
          stopOnFailure="false"
          stopOnIncomplete="false"
          stopOnSkipped="false"
-         verbose="false">
+         verbose="false"
+         bootstrap="../vendor/autoload.php">
     <listeners>
         <listener class="JSiefer\ClassMocker\TestListener" />
     </listeners>
