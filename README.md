@@ -60,8 +60,6 @@ which is then generated on the fly for you.
 All generated class will also implementing the ``PHPUnit_Framework_MockObject_MockObject`` interface and give
 you access to ``expects()`` and ``method()`` methods for testing.
 
-All properties can be set if required.
-
 To enable the class-mocker you need a custom bootstrap file for your PHPUnit test project and define the
 classes that you want to generate on the fly.
 
@@ -78,7 +76,7 @@ $classMocker->mock('Example_Namespace_*');
 $classMocker->enable();
 ```
 
-That's it, now you can simple test your classes without requiring any original framework classes.
+That's it, now once enabled, you can simple test your classes without requiring any original framework classes.
 
 
 ```php
@@ -138,6 +136,9 @@ The important part when mocking many classes, is that the whole PHPUnit Test nee
 
 You can define class footprints and include JSON class footprint reference files for cloning an entire class tree.
 
-The project was initial created to mock Magento for UnitTests. Check out the 
-[mock-mage lib](https://github.com/jsiefer/mage-mock) which uses this lib to mock the entire 
+Ideally you don't use this library directly but instead create a framework-mock library which provides all class
+references and constants etc that are required and use that library in your project for testing.
+
+This project was initial created to mock Magento for UnitTests. Check out the
+[mock-mage lib](https://github.com/jsiefer/mage-mock) which uses this lib to mock the entire
 Magento Framework/Application.
