@@ -11,7 +11,7 @@ install:
 
 script:
   - mkdir -p build/logs
-  - phpunit --coverage-clover build/logs/clover.xml --configuration tests/phpunit.xml.dist.xml
+  - vendor/phpunit/phpunit/phpunit --coverage-clover build/logs/clover.xml --configuration tests/phpunit.xml.dist.xml
 
 after_script:
  - vendor/bin/coveralls -v
