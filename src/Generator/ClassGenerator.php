@@ -243,6 +243,9 @@ class ClassGenerator extends ZendClassGenerator
         $this->addTrait($alias);
 
         foreach ($trait->getMethods() as $method) {
+            if ($method->isAbstract()) {
+                continue;
+            }
             $this->registerTraitMethod($alias, $method);
         }
 
