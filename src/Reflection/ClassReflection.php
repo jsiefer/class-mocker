@@ -112,7 +112,7 @@ class ClassReflection extends ZendClassReflection
     public function getSort()
     {
         if ($this->_sort === null) {
-            $this->_sort = (float) $this->extractTag('sort', 0);
+            $this->_sort = (float)$this->extractTag('sort', 0);
         }
 
         return $this->_sort;

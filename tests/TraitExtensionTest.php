@@ -46,7 +46,7 @@ class TraitExtensionTest extends \PHPUnit_Framework_TestCase
         BaseMock::setDefaultCallBehavior(BaseMock::DEFAULT_BEHAVIOUR_RETURN_NULL);
 
         $this->classMocker = new ClassMocker;
-        //$classMocker->setGenerationDir('./var/generation');
+        //$this->classMocker->setGenerationDir('./var/generation');
 
         $this->classMocker->mock('Foobar\*');
         $this->classMocker->registerTrait(TraitA::class);
@@ -192,7 +192,7 @@ class TraitExtensionTest extends \PHPUnit_Framework_TestCase
 
         // force overwrite different order
         $this->classMocker->mock('Demo\*Collection');
-        $this->classMocker->registerTrait(TraitA::class, 'Demo\*Collection', 0);
+        $this->classMocker->registerTrait(TraitA::class, 'Demo\*Collection', -10);
         $this->classMocker->registerTrait(TraitB::class, 'Demo\*Collection', 50);
         $this->classMocker->registerTrait(TraitC::class, 'Demo\*Collection', 100);
         $this->classMocker->registerTrait(DummyTrait::class, 'Demo\*Collection');
