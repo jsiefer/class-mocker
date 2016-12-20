@@ -2,7 +2,7 @@
     "name": "jsiefer/class-mocker",
     "description": "Can mock entire frameworks or namespaces",
     "license": "MIT",
-    "version": "0.3.1",
+    "version": "0.3.2",
     "keywords": ["testing", "unit test", "phpunit", "mocking"],
     "authors": [
         {

@@ -17,21 +17,14 @@ use PHPUnit_Framework_MockObject_MockObject as PHPUnitObjectInterface;
 /**
  * Class PHPUnitObject
  */
-abstract class PHPUnitObject implements PHPUnitObjectInterface
+abstract class PHPUnitObject
 {
     /**
      * Invocation Mocker
      *
      * @var InvocationMocker
      */
-    private $__phpunit_invocationMocker;
-
-    /**
-     * Orignal object for proxy mode
-     *
-     * @var mixed
-     */
-    private $__phpunit_originalObject;
+    private $__classMock_invocationMocker;
 
     /**
      * Current active test case
@@ -75,17 +68,10 @@ abstract class PHPUnitObject implements PHPUnitObjectInterface
      */
     public function __call($name, $arguments)
     {
-        $mocker = $this->__phpunit_getInvocationMocker();
+        $mocker = $this->__classMock_getInvocationMocker();
         $invocation = new InvocationObject(get_class($this), $name, $arguments, $this, FALSE);
 
         $result = $mocker->invoke($invocation);
-
-        // check for proxy method
-        if ($this->__phpunit_originalObject) {
-            if (method_exists($this->__phpunit_originalObject, $name)) {
-                return call_user_func_array(array($this->__phpunit_originalObject, $name), $arguments);
-            }
-        }
 
         return $result;
     }
@@ -94,12 +80,12 @@ abstract class PHPUnitObject implements PHPUnitObjectInterface
      * Registers a new expectation in the mock object and returns the match
      * object which can be infused with further details.
      *
-     * @param  \PHPUnit_Framework_MockObject_Matcher_Invocation       $matcher
+     * @param  \PHPUnit_Framework_MockObject_Matcher_Invocation $matcher
      * @return \PHPUnit_Framework_MockObject_Builder_InvocationMocker
      */
     public function expects(\PHPUnit_Framework_MockObject_Matcher_Invocation $matcher)
     {
-        return $this->__phpunit_getInvocationMocker()->expects($matcher);
+        return $this->__classMock_getInvocationMocker()->expects($matcher);
     }
 
     /**
@@ -115,40 +101,28 @@ abstract class PHPUnitObject implements PHPUnitObjectInterface
         return call_user_func_array(array($expects, 'method'), func_get_args());
     }
 
-
-    /**
-     * @param $originalObject
-     *
-     * @return InvocationMocker
-     * @since  Method available since Release 2.0.0
-     */
-    public function __phpunit_setOriginalObject($originalObject)
-    {
-        $this->__phpunit_originalObject = $originalObject;
-    }
-
     /**
      * @return InvocationMocker
      */
-    public function __phpunit_getInvocationMocker()
+    public function __classMock_getInvocationMocker()
     {
-        if ($this->__phpunit_invocationMocker === null) {
-            $this->__phpunit_invocationMocker = new InvocationMocker();
+        if ($this->__classMock_invocationMocker === null) {
+            $this->__classMock_invocationMocker = new InvocationMocker();
             if (self::$__classMock_activeListener) {
                 self::$__classMock_activeListener->registerMock($this);
             }
         }
 
-        return $this->__phpunit_invocationMocker;
+        return $this->__classMock_invocationMocker;
     }
 
     /**
      * @return bool
      * @codeCoverageIgnore
      */
-    public function __phpunit_hasMatchers()
+    public function __classMock_hasMatchers()
     {
-        return $this->__phpunit_getInvocationMocker()->hasMatchers();
+        return $this->__classMock_getInvocationMocker()->hasMatchers();
     }
 
     /**
@@ -158,31 +132,9 @@ abstract class PHPUnitObject implements PHPUnitObjectInterface
      * @throws \PHPUnit_Framework_ExpectationFailedException
      * @codeCoverageIgnore
      */
-    public function __phpunit_verify()
+    public function __classMock_verify()
     {
-        $this->__phpunit_getInvocationMocker()->verify();
-        $this->__phpunit_invocationMocker = null;
-    }
-
-    /**
-     * Registers a new static expectation in the mock object and returns the
-     * match object which can be infused with further details.
-     *
-     * @param  \PHPUnit_Framework_MockObject_Matcher_Invocation $matcher
-     * @return \PHPUnit_Framework_MockObject_Builder_InvocationMocker
-     * @codeCoverageIgnore
-     */
-    public static function staticExpects(\PHPUnit_Framework_MockObject_Matcher_Invocation $matcher)
-    {
-        throw new \BadMethodCallException("Method only implemented for backward compatibility");
-    }
-
-    /**
-     * @return \PHPUnit_Framework_MockObject_InvocationMocker
-     * @codeCoverageIgnore
-     */
-    public static function __phpunit_getStaticInvocationMocker()
-    {
-        throw new \BadMethodCallException("Method only implemented for backward compatibility");
+        $this->__classMock_getInvocationMocker()->verify();
+        $this->__classMock_invocationMocker = null;
     }
 }

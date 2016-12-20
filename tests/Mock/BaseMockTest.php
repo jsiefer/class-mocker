@@ -73,23 +73,6 @@ class BaseMockTest extends \PHPUnit_Framework_TestCase
     }
 
     /**
-     * Should forward calls to original object
-     *
-     * @test
-     */
-    public function testProxyMode()
-    {
-        $original = $this->getMock('DummyClassOriginal', ['test']);
-        $original->expects($this->once())->method('test')->will($this->returnValue(100));
-
-        $dummy = new DummyClass();
-        $dummy->__phpunit_setOriginalObject($original);
-
-        $this->assertEquals(100, $dummy->test());
-        $this->assertNull($dummy->test2());
-    }
-
-    /**
      * Should allow dynamic property access
      *
      * @test
@@ -214,6 +197,19 @@ class BaseMockTest extends \PHPUnit_Framework_TestCase
         $this->assertNull($dummy->someMethod());
         $this->assertSame('', $dummy->__toString());
     }
+
+    /**
+     * Test to make sure you can create a mock
+     * of a class that extends from BaseMock
+     *
+     * @return void
+     * @test
+     */
+    public function testMockOfBaseMock()
+    {
+        $mock = $this->getMock(DummyClass::class);
+    }
+
 
     /**
      * Test different default behaviors
