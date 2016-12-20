@@ -11,6 +11,7 @@ namespace JSiefer\ClassMocker;
 
 use Exception;
 use JSiefer\ClassMocker\Mock\BaseMock;
+use JSiefer\ClassMocker\Mock\PHPUnitObject;
 use PHPUnit_Framework_AssertionFailedError;
 use PHPUnit_Framework_Test;
 use PHPUnit_Framework_TestSuite;
@@ -23,14 +24,14 @@ class TestListener implements \PHPUnit_Framework_TestListener
     /**
      * Registered mocks
      *
-     * @var BaseMock[]
+     * @var PHPUnitObject[]
      */
     private $_mocks = [];
 
     /**
      * @param BaseMock $mock
      */
-    public function registerMock(BaseMock $mock)
+    public function registerMock(PHPUnitObject $mock)
     {
         $this->_mocks[] = $mock;
     }
@@ -58,10 +59,10 @@ class TestListener implements \PHPUnit_Framework_TestListener
     {
         try {
             foreach ($this->_mocks as $mock) {
-                if ($mock->__phpunit_hasMatchers() && $test instanceof \PHPUnit_Framework_TestCase) {
+                if ($mock->__classMock_hasMatchers() && $test instanceof \PHPUnit_Framework_TestCase) {
                     $test->addToAssertionCount(1);
                 }
-                $mock->__phpunit_verify();
+                $mock->__classMock_verify();
             }
         }
         catch(\Exception $e) {
